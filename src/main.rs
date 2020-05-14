@@ -2,11 +2,11 @@ use async_std::sync::channel;
 use smol::Task;
 use std::time::Duration;
 
-use dwm_bar::battery::{BatteryWidget, BatteryWidgetConfig};
-use dwm_bar::date::{DateWidget, DateWidgetConfig};
-use dwm_bar::network::{NetworkWidget, NetworkWidgetConfig};
-use dwm_bar::wifi::{WifiWidget, WifiWidgetConfig};
-use dwm_bar::Output;
+use barr::battery::{BatteryWidget, BatteryWidgetConfig};
+use barr::date::{DateWidget, DateWidgetConfig};
+use barr::network::{NetworkWidget, NetworkWidgetConfig};
+use barr::wifi::{WifiWidget, WifiWidgetConfig};
+use barr::Output;
 
 fn main() {
     let (sender, receiver) = channel::<Output>(100);
@@ -40,22 +40,22 @@ fn main() {
         sender.clone(),
     );
 
-    let ram = dwm_bar::memory::RamWidget::new(
-        dwm_bar::memory::RamWidgetConfig {
+    let ram = barr::memory::RamWidget::new(
+        barr::memory::RamWidgetConfig {
             interval: Duration::from_secs(1),
         },
         sender.clone(),
     );
 
-    let mut cpu = dwm_bar::cpu::CpuWidget::new(
-        dwm_bar::cpu::CpuWidgetConfig {
+    let mut cpu = barr::cpu::CpuWidget::new(
+        barr::cpu::CpuWidgetConfig {
             interval: Duration::from_secs(1),
         },
         sender.clone(),
     );
 
-    let brightness = dwm_bar::brightness::BrightnessWidget::new(
-        dwm_bar::brightness::BrightnessWidgetConfig {
+    let brightness = barr::brightness::BrightnessWidget::new(
+        barr::brightness::BrightnessWidgetConfig {
             interval: Duration::from_secs(1),
         },
         sender.clone(),

@@ -1,5 +1,5 @@
 [package]
-name = "dwm-bar"
+name = "barr"
 version = "0.1.0"
 authors = ["tiso"]
 edition = "2018"
