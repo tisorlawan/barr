@@ -1,10 +1,10 @@
-#![feature(test)]
-
-extern crate test;
 pub mod date;
 pub mod network;
 
 pub mod battery;
+pub mod brightness;
+pub mod cpu;
+pub mod memory;
 pub mod wifi;
 
 #[derive(Debug, Copy, Clone)]
@@ -13,6 +13,9 @@ pub enum WidgetTag {
     NetworkSpeed,
     Battery,
     Wifi,
+    Memory,
+    Cpu,
+    Brightness,
 }
 
 #[derive(Debug)]
