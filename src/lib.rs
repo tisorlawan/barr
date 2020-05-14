@@ -8,6 +8,7 @@ pub mod memory;
 pub mod wifi;
 
 pub mod alsa;
+pub mod mpd;
 
 #[derive(Debug, Copy, Clone)]
 pub enum WidgetTag {
@@ -19,6 +20,7 @@ pub enum WidgetTag {
     Cpu,
     Brightness,
     Alsa,
+    Mpd,
 }
 
 #[derive(Debug)]

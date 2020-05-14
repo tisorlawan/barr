@@ -68,6 +68,13 @@ fn main() {
         sender.clone(),
     );
 
+    let mut mpd = barr::mpd::MpdWidget::new(
+        barr::mpd::MpdWidgetConfig {
+            interval: Duration::from_secs(1),
+        },
+        sender.clone(),
+    );
+
     smol::run(async {
         Task::spawn(async move {
             date.stream_output().await;
@@ -106,6 +113,11 @@ fn main() {
 
         Task::spawn(async move {
             alsa.stream_output().await;
+        })
+        .detach();
+
+        Task::spawn(async move {
+            mpd.stream_output().await;
         })
         .detach();
 
