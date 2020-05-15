@@ -7,12 +7,20 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 #[derive(Debug)]
+enum State {
+    Pause,
+    Play,
+    Stop,
+}
+
+#[derive(Debug)]
 struct Status {
     repeat: bool,
     random: bool,
     single: bool,
     consume: bool,
     percentage: u8,
+    state: State,
 }
 
 #[derive(Debug)]
@@ -26,6 +34,7 @@ pub struct MpdWidgetConfig {
     pub interval: Duration,
 }
 
+#[derive(Debug)]
 pub struct MpdWidget {
     stream: TcpStream,
     config: MpdWidgetConfig,
@@ -48,11 +57,11 @@ impl MpdWidget {
         }
     }
 
-    pub async fn stream_output(&self) {
+    pub async fn stream_output(&mut self) {
         loop {
-            // let song = self.current_song().await;
-            // let status = self.status().await;
-            let output = format!("aaa");
+            let song = self.current_song().await;
+            let status = self.status().await;
+            let output = format!("[{}] {} - {}", status.percentage, song.artist, song.title);
             self.sender
                 .send(Output {
                     text: output,
@@ -104,15 +113,31 @@ impl MpdWidget {
             .map(|mut l| (l.next().unwrap().to_owned(), l.next().unwrap().to_owned()))
             .collect();
 
-        let elapsed: f64 = s.get("elapsed").unwrap().parse().unwrap();
-        let duration: f64 = s.get("duration").unwrap().parse().unwrap();
+        let elapsed: f64 = s
+            .get("elapsed")
+            .unwrap_or(&"1".to_string())
+            .parse()
+            .unwrap();
+
+        let duration: f64 = s
+            .get("duration")
+            .unwrap_or(&"1".to_string())
+            .parse()
+            .unwrap();
+
+        let state = match s.get("state").unwrap().as_ref() {
+            "pause" => State::Pause,
+            "play" => State::Play,
+            "stop" => State::Stop,
+            _ => State::Play,
+        };
 
         Status {
             consume: s.get("consume").unwrap() == "1",
             single: s.get("single").unwrap() == "1",
             random: s.get("random").unwrap() == "1",
             repeat: s.get("repeat").unwrap() == "1",
-
+            state: state,
             percentage: (elapsed * 100f64 / duration).floor() as u8,
         }
     }
