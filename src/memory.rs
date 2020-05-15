@@ -4,19 +4,19 @@ use smol::Timer;
 use std::time::Duration;
 use sysinfo::{System, SystemExt};
 
-pub struct RamWidgetConfig {
+pub struct Config {
     pub interval: Duration,
 }
 
-pub struct RamWidget {
-    config: RamWidgetConfig,
+pub struct Widget {
+    config: Config,
     sender: Sender<Output>,
     tag: WidgetTag,
     system: System,
 }
 
-impl RamWidget {
-    pub fn new(config: RamWidgetConfig, sender: Sender<Output>) -> Self {
+impl Widget {
+    pub fn new(config: Config, sender: Sender<Output>) -> Self {
         Self {
             config,
             sender,

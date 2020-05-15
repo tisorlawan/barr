@@ -15,19 +15,19 @@ struct NetworkStats {
     pub tx_errors: u64,
 }
 
-pub struct NetworkWidgetConfig {
+pub struct Config {
     pub interval: Duration,
     pub interface: String,
 }
 
-pub struct NetworkWidget {
-    config: NetworkWidgetConfig,
+pub struct Widget {
+    config: Config,
     sender: Sender<Output>,
     tag: WidgetTag,
 }
 
-impl NetworkWidget {
-    pub fn new(config: NetworkWidgetConfig, sender: Sender<Output>) -> Self {
+impl Widget {
+    pub fn new(config: Config, sender: Sender<Output>) -> Self {
         Self {
             config,
             sender,

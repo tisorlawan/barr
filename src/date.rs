@@ -4,18 +4,18 @@ use chrono::prelude::*;
 use smol::Timer;
 use std::time::Duration;
 
-pub struct DateWidgetConfig {
+pub struct Config {
     pub interval: Duration,
 }
 
-pub struct DateWidget {
-    config: DateWidgetConfig,
+pub struct Widget {
+    config: Config,
     sender: Sender<Output>,
     tag: WidgetTag,
 }
 
-impl DateWidget {
-    pub fn new(config: DateWidgetConfig, sender: Sender<Output>) -> Self {
+impl Widget {
+    pub fn new(config: Config, sender: Sender<Output>) -> Self {
         Self {
             config,
             sender,

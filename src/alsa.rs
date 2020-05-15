@@ -5,18 +5,18 @@ use async_std::sync::Sender;
 use smol::Timer;
 use std::time::Duration;
 
-pub struct AlsaWidgetConfig {
+pub struct Config {
     pub interval: Duration,
 }
 
-pub struct AlsaWidget {
-    config: AlsaWidgetConfig,
+pub struct Widget {
+    config: Config,
     sender: Sender<Output>,
     tag: WidgetTag,
 }
 
-impl AlsaWidget {
-    pub fn new(config: AlsaWidgetConfig, sender: Sender<Output>) -> Self {
+impl Widget {
+    pub fn new(config: Config, sender: Sender<Output>) -> Self {
         Self {
             config,
             sender,

@@ -6,13 +6,13 @@ use smol::Timer;
 use std::time::Duration;
 
 #[derive(Debug)]
-pub struct BatteryWidgetConfig {
+pub struct Config {
     pub interval: Duration,
 }
 
 #[derive(Debug)]
-pub struct BatteryWidget {
-    config: BatteryWidgetConfig,
+pub struct Widget {
+    config: Config,
     sender: Sender<Output>,
     tag: WidgetTag,
 }
@@ -23,8 +23,8 @@ struct BatteryInfo {
     pub value: f32,
 }
 
-impl BatteryWidget {
-    pub fn new(config: BatteryWidgetConfig, sender: Sender<Output>) -> Self {
+impl Widget {
+    pub fn new(config: Config, sender: Sender<Output>) -> Self {
         Self {
             config,
             sender,

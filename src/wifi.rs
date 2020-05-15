@@ -7,18 +7,18 @@ use async_std::sync::Sender;
 use smol::Timer;
 use std::time::Duration;
 
-pub struct WifiWidgetConfig {
+pub struct Config {
     pub interval: Duration,
 }
 
-pub struct WifiWidget {
-    config: WifiWidgetConfig,
+pub struct Widget {
+    config: Config,
     sender: Sender<Output>,
     tag: WidgetTag,
 }
 
-impl WifiWidget {
-    pub fn new(config: WifiWidgetConfig, sender: Sender<Output>) -> Self {
+impl Widget {
+    pub fn new(config: Config, sender: Sender<Output>) -> Self {
         Self {
             config,
             sender,
@@ -88,11 +88,11 @@ mod wifi_tests {
     #[test]
 
     fn test_wifi_quality() {
-        WifiWidget::get_current_wifi_quality();
+        Widget::get_current_wifi_quality();
     }
 
     #[test]
     fn test_wifi_ssid() {
-        assert_eq!(Some("dargombes".to_owned()), WifiWidget::get_wifi_ssid());
+        assert_eq!(Some("dargombes".to_owned()), Widget::get_wifi_ssid());
     }
 }

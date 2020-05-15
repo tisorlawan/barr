@@ -30,20 +30,20 @@ struct Song {
 }
 
 #[derive(Debug)]
-pub struct MpdWidgetConfig {
+pub struct Config {
     pub interval: Duration,
 }
 
 #[derive(Debug)]
-pub struct MpdWidget {
+pub struct Widget {
     stream: TcpStream,
-    config: MpdWidgetConfig,
+    config: Config,
     sender: Sender<Output>,
     tag: WidgetTag,
 }
 
-impl MpdWidget {
-    pub async fn new(config: MpdWidgetConfig, sender: Sender<Output>) -> Self {
+impl Widget {
+    pub async fn new(config: Config, sender: Sender<Output>) -> Self {
         let mut stream = TcpStream::connect("localhost:6600").await.unwrap();
 
         let mut buf = vec![0u8; 1024];

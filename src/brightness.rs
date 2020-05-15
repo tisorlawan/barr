@@ -4,19 +4,19 @@ use smol::Timer;
 use std::time::Duration;
 
 #[derive(Debug)]
-pub struct BrightnessWidgetConfig {
+pub struct Config {
     pub interval: Duration,
 }
 
 #[derive(Debug)]
-pub struct BrightnessWidget {
-    config: BrightnessWidgetConfig,
+pub struct Widget {
+    config: Config,
     sender: Sender<Output>,
     tag: WidgetTag,
 }
 
-impl BrightnessWidget {
-    pub fn new(config: BrightnessWidgetConfig, sender: Sender<Output>) -> Self {
+impl Widget {
+    pub fn new(config: Config, sender: Sender<Output>) -> Self {
         Self {
             config,
             sender,
@@ -54,8 +54,8 @@ mod brightness_tests {
     #[async_std::test]
     async fn test_get_brightness() {
         let (sender, _) = async_std::sync::channel::<crate::Output>(100);
-        let b = BrightnessWidget::new(
-            BrightnessWidgetConfig {
+        let b = Widget::new(
+            Config {
                 interval: std::time::Duration::from_secs(1),
             },
             sender,

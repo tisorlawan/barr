@@ -4,19 +4,19 @@ use psutil::cpu::CpuPercentCollector;
 use smol::Timer;
 use std::time::Duration;
 
-pub struct CpuWidgetConfig {
+pub struct Config {
     pub interval: Duration,
 }
 
-pub struct CpuWidget {
-    config: CpuWidgetConfig,
+pub struct Widget {
+    config: Config,
     sender: Sender<Output>,
     tag: WidgetTag,
     collector: CpuPercentCollector,
 }
 
-impl CpuWidget {
-    pub fn new(config: CpuWidgetConfig, sender: Sender<Output>) -> Self {
+impl Widget {
+    pub fn new(config: Config, sender: Sender<Output>) -> Self {
         Self {
             config,
             sender,
