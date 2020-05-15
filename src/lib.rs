@@ -10,7 +10,7 @@ pub mod wifi;
 pub mod alsa;
 pub mod mpd;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
 pub enum WidgetTag {
     Date,
     NetworkSpeed,

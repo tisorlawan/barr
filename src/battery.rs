@@ -14,7 +14,7 @@ pub struct Config {
 pub struct Widget {
     config: Config,
     sender: Sender<Output>,
-    tag: WidgetTag,
+    pub tag: WidgetTag,
 }
 
 #[derive(Debug)]

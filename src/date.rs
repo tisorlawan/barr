@@ -11,7 +11,7 @@ pub struct Config {
 pub struct Widget {
     config: Config,
     sender: Sender<Output>,
-    tag: WidgetTag,
+    pub tag: WidgetTag,
 }
 
 impl Widget {
@@ -25,9 +25,11 @@ impl Widget {
 
     pub async fn stream_output(&self) {
         loop {
+            let text = Self::get_date("%a, %d %b %H:%M:%S");
+
             self.sender
                 .send(Output {
-                    text: Self::get_date("%a, %d %b %H:%M:%S"),
+                    text,
                     tag: self.tag,
                 })
                 .await;

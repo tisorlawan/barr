@@ -39,7 +39,7 @@ pub struct Widget {
     stream: TcpStream,
     config: Config,
     sender: Sender<Output>,
-    tag: WidgetTag,
+    pub tag: WidgetTag,
 }
 
 impl Widget {
