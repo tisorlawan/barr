@@ -23,7 +23,7 @@ pub struct Config {
 pub struct Widget {
     config: Config,
     sender: Sender<Output>,
-    pub tag: WidgetTag,
+    tag: WidgetTag,
 }
 
 impl Widget {
@@ -33,6 +33,10 @@ impl Widget {
             sender,
             tag: WidgetTag::NetworkSpeed,
         }
+    }
+
+    pub fn tag(&self) -> WidgetTag {
+        self.tag
     }
 
     fn get_network_stats(&self) -> io::Result<NetworkStats> {

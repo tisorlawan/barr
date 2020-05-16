@@ -11,7 +11,7 @@ pub struct Config {
 pub struct Widget {
     config: Config,
     sender: Sender<Output>,
-    pub tag: WidgetTag,
+    tag: WidgetTag,
     collector: CpuPercentCollector,
 }
 
@@ -23,6 +23,10 @@ impl Widget {
             tag: WidgetTag::Cpu,
             collector: CpuPercentCollector::new().unwrap(),
         }
+    }
+
+    pub fn tag(&self) -> WidgetTag {
+        self.tag
     }
 
     pub async fn stream_output(&mut self) {

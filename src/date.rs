@@ -4,18 +4,37 @@ use chrono::prelude::*;
 use smol::Timer;
 use std::time::Duration;
 
-pub struct Config {
-    pub interval: Duration,
+pub struct Config<T>
+where
+    T: AsRef<str>,
+{
+    format: T,
+    interval: Duration,
 }
 
-pub struct Widget {
-    config: Config,
+impl<T> Config<T>
+where
+    T: AsRef<str>,
+{
+    pub fn new(format: T, interval: Duration) -> Self {
+        Self { format, interval }
+    }
+}
+
+pub struct Widget<T>
+where
+    T: AsRef<str>,
+{
+    config: Config<T>,
     sender: Sender<Output>,
-    pub tag: WidgetTag,
+    tag: WidgetTag,
 }
 
-impl Widget {
-    pub fn new(config: Config, sender: Sender<Output>) -> Self {
+impl<T> Widget<T>
+where
+    T: AsRef<str>,
+{
+    pub fn new(config: Config<T>, sender: Sender<Output>) -> Self {
         Self {
             config,
             sender,
@@ -23,9 +42,13 @@ impl Widget {
         }
     }
 
+    pub fn tag(&self) -> WidgetTag {
+        self.tag
+    }
+
     pub async fn stream_output(&self) {
         loop {
-            let text = Self::get_date("%a, %d %b %H:%M:%S");
+            let text = Local::now().format(self.config.format.as_ref()).to_string();
 
             self.sender
                 .send(Output {
@@ -35,10 +58,5 @@ impl Widget {
                 .await;
             Timer::after(self.config.interval).await;
         }
-    }
-
-    fn get_date(fmt: &str) -> String {
-        let now = Local::now();
-        now.format(fmt).to_string()
     }
 }

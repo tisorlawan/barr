@@ -14,7 +14,7 @@ pub struct Config {
 pub struct Widget {
     config: Config,
     sender: Sender<Output>,
-    pub tag: WidgetTag,
+    tag: WidgetTag,
 }
 
 #[derive(Debug)]
@@ -30,6 +30,10 @@ impl Widget {
             sender,
             tag: WidgetTag::Battery,
         }
+    }
+
+    pub fn tag(&self) -> WidgetTag {
+        self.tag
     }
 
     fn battery_stat() -> Result<BatteryInfo, battery::Error> {

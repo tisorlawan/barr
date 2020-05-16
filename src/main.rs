@@ -41,22 +41,22 @@ fn main() {
 
     smol::run(async {
         let alsa = widget_def!(barr::alsa, sender);
-        tags.push(alsa.tag);
+        tags.push(alsa.tag());
 
         let mut mpd = widget_def!(barr::mpd, sender).await;
-        tags.push(mpd.tag);
+        tags.push(mpd.tag());
 
         let brightness = widget_def!(barr::brightness, sender);
-        tags.push(brightness.tag);
+        tags.push(brightness.tag());
 
         let mut cpu = widget_def!(barr::cpu, sender);
-        tags.push(cpu.tag);
+        tags.push(cpu.tag());
 
         let ram = widget_def!(barr::memory, sender);
-        tags.push(ram.tag);
+        tags.push(ram.tag());
 
         let wifi = widget_def!(barr::wifi, sender);
-        tags.push(wifi.tag);
+        tags.push(wifi.tag());
 
         let network_speed = barr::network::Widget::new(
             barr::network::Config {
@@ -65,13 +65,16 @@ fn main() {
             },
             sender.clone(),
         );
-        tags.push(network_speed.tag);
+        tags.push(network_speed.tag());
 
         let battery = widget_def!(barr::battery, sender);
-        tags.push(battery.tag);
+        tags.push(battery.tag());
 
-        let date = widget_def!(barr::date, sender);
-        tags.push(date.tag);
+        let date = barr::date::Widget::new(
+            barr::date::Config::new("%a, %d %b %H:%M:%S", Duration::from_secs(1)),
+            sender.clone(),
+        );
+        tags.push(date.tag());
 
         let tag_indices: HashMap<WidgetTag, usize> =
             tags.iter().enumerate().map(|(i, v)| (*v, i)).collect();

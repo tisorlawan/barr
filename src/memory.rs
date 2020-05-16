@@ -11,7 +11,7 @@ pub struct Config {
 pub struct Widget {
     config: Config,
     sender: Sender<Output>,
-    pub tag: WidgetTag,
+    tag: WidgetTag,
     system: System,
 }
 
@@ -23,6 +23,10 @@ impl Widget {
             tag: WidgetTag::Memory,
             system: System::new_all(),
         }
+    }
+
+    pub fn tag(&self) -> WidgetTag {
+        self.tag
     }
 
     pub async fn stream_output(&self) {

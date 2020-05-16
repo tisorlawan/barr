@@ -39,7 +39,7 @@ pub struct Widget {
     stream: TcpStream,
     config: Config,
     sender: Sender<Output>,
-    pub tag: WidgetTag,
+    tag: WidgetTag,
 }
 
 impl Widget {
@@ -55,6 +55,10 @@ impl Widget {
             stream,
             tag: WidgetTag::Mpd,
         }
+    }
+
+    pub fn tag(&self) -> WidgetTag {
+        self.tag
     }
 
     pub async fn stream_output(&mut self) {

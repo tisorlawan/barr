@@ -12,7 +12,7 @@ pub struct Config {
 pub struct Widget {
     config: Config,
     sender: Sender<Output>,
-    pub tag: WidgetTag,
+    tag: WidgetTag,
 }
 
 impl Widget {
@@ -22,6 +22,10 @@ impl Widget {
             sender,
             tag: WidgetTag::Alsa,
         }
+    }
+
+    pub fn tag(&self) -> WidgetTag {
+        self.tag
     }
 
     pub async fn stream_output(&self) {
