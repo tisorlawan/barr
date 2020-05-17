@@ -20,7 +20,7 @@ impl Widget for Wifi {
         let wifi = Self::get_wifi_ssid();
         if wifi.is_none() {
             WidgetOutput {
-                text: format!("Not Connected"),
+                text: "Not Connected".to_string(),
             }
         } else {
             let quality = Self::get_current_wifi_quality().unwrap().abs();
@@ -44,13 +44,11 @@ impl Wifi {
 
         let quality: String = reader
             .lines()
-            .skip(2)
-            .nth(0)?
+            .nth(2)?
             .unwrap()
             .split_whitespace()
             .map(Into::into)
-            .nth(3)
-            .unwrap();
+            .nth(3)?;
 
         Some(quality.parse::<f64>().unwrap() * (10.0 / 7.0))
     }

@@ -82,12 +82,12 @@ impl Network {
         let tx_errors: u64 = value_from_file::<u64>(&stats_file("tx_errors"))?;
 
         Ok(NetworkStats {
-            rx_bytes: rx_bytes,
-            tx_bytes: tx_bytes,
-            rx_packets: rx_packets,
-            tx_packets: tx_packets,
-            rx_errors: rx_errors,
-            tx_errors: tx_errors,
+            rx_bytes,
+            tx_bytes,
+            rx_packets,
+            tx_packets,
+            rx_errors,
+            tx_errors,
         })
     }
 }
@@ -101,9 +101,8 @@ fn read_file(path: &str) -> io::Result<String> {
 
 fn value_from_file<T: std::str::FromStr>(path: &str) -> io::Result<T> {
     read_file(path)?
-        .trim_end_matches("\n")
+        .trim_end_matches('\n')
         .parse()
-        .and_then(|n| Ok(n))
         .or_else(|_| {
             Err(io::Error::new(
                 io::ErrorKind::Other,

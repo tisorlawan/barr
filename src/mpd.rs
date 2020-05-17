@@ -143,7 +143,7 @@ impl MPD {
             single: s.get("single").unwrap() == "1",
             random: s.get("random").unwrap() == "1",
             repeat: s.get("repeat").unwrap() == "1",
-            state: state,
+            state,
             percentage: (elapsed * 100f64 / duration).floor() as u8,
         }
     }

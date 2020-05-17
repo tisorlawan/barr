@@ -36,10 +36,18 @@ pub struct WidgetOutput {
     pub text: String,
 }
 
+type Handler = Box<dyn Widget + Send + Sync + 'static>;
+
 pub struct Barr {
-    widgets: Vec<Arc<Box<dyn Widget + Send + Sync + 'static>>>,
+    widgets: Vec<Arc<Handler>>,
     sender: Sender<(usize, WidgetOutput)>,
     receiver: Receiver<(usize, WidgetOutput)>,
+}
+
+impl Default for Barr {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Barr {
@@ -52,7 +60,7 @@ impl Barr {
         }
     }
 
-    pub fn add_widget(&mut self, widget: Box<dyn Widget + Send + Sync + 'static>) {
+    pub fn add_widget(&mut self, widget: Handler) {
         self.widgets.push(Arc::new(widget));
     }
 

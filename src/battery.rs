@@ -1,5 +1,3 @@
-use battery;
-
 use crate::{Widget, WidgetOutput};
 use async_trait::async_trait;
 use std::time::Duration;
@@ -35,18 +33,11 @@ impl Battery {
     }
 
     fn battery_stat() -> Result<BatteryInfo, battery::Error> {
-        let manager = battery::Manager::new()?;
+        let battery = battery::Manager::new()?.batteries()?.next().unwrap()?;
 
-        for maybe_battery in manager.batteries()? {
-            let battery = maybe_battery?;
-            return Ok(BatteryInfo {
-                state: battery.state(),
-                value: battery.state_of_charge().value * 100_f32,
-            });
-        }
         Ok(BatteryInfo {
-            state: battery::State::Unknown,
-            value: 0_f32,
+            state: battery.state(),
+            value: battery.state_of_charge().value * 100_f32,
         })
     }
 }
