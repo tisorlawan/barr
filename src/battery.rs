@@ -1,20 +1,12 @@
 use battery;
 
-use crate::{Output, WidgetTag};
-use async_std::sync::Sender;
-use smol::Timer;
+use crate::{Widget, WidgetOutput};
+use async_trait::async_trait;
 use std::time::Duration;
 
 #[derive(Debug)]
-pub struct Config {
-    pub interval: Duration,
-}
-
-#[derive(Debug)]
-pub struct Widget {
-    config: Config,
-    sender: Sender<Output>,
-    tag: WidgetTag,
+pub struct Battery {
+    interval: Duration,
 }
 
 #[derive(Debug)]
@@ -23,17 +15,23 @@ struct BatteryInfo {
     pub value: f32,
 }
 
-impl Widget {
-    pub fn new(config: Config, sender: Sender<Output>) -> Self {
-        Self {
-            config,
-            sender,
-            tag: WidgetTag::Battery,
+#[async_trait]
+impl Widget for Battery {
+    async fn get_output(&self) -> WidgetOutput {
+        let info = Self::battery_stat().unwrap();
+        WidgetOutput {
+            text: format!("{:?}", info),
         }
     }
 
-    pub fn tag(&self) -> WidgetTag {
-        self.tag
+    fn interval(&self) -> Duration {
+        self.interval
+    }
+}
+
+impl Battery {
+    pub fn new(interval: Duration) -> Self {
+        Self { interval }
     }
 
     fn battery_stat() -> Result<BatteryInfo, battery::Error> {
@@ -50,19 +48,5 @@ impl Widget {
             state: battery::State::Unknown,
             value: 0_f32,
         })
-    }
-
-    pub async fn stream_output(&self) {
-        loop {
-            let info = Self::battery_stat().unwrap();
-
-            self.sender
-                .send(Output {
-                    text: format!("{:?}", info),
-                    tag: self.tag,
-                })
-                .await;
-            Timer::after(self.config.interval).await;
-        }
     }
 }

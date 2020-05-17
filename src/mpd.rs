@@ -1,8 +1,8 @@
-use crate::{Output, WidgetTag};
+use crate::{Widget, WidgetOutput};
 use async_std::net::TcpStream;
 use async_std::prelude::*;
-use async_std::sync::Sender;
-use smol::Timer;
+use async_std::sync::Mutex;
+use async_trait::async_trait;
 use std::collections::HashMap;
 use std::time::Duration;
 
@@ -30,62 +30,59 @@ struct Song {
 }
 
 #[derive(Debug)]
-pub struct Config {
-    pub interval: Duration,
+pub struct MPD {
+    stream: Mutex<TcpStream>,
+    interval: Duration,
 }
 
-#[derive(Debug)]
-pub struct Widget {
-    stream: TcpStream,
-    config: Config,
-    sender: Sender<Output>,
-    tag: WidgetTag,
+#[async_trait]
+impl Widget for MPD {
+    fn interval(&self) -> Duration {
+        self.interval
+    }
+
+    async fn get_output(&self) -> WidgetOutput {
+        let song = self.current_song().await;
+        let status = self.status().await;
+        let output = format!("[{}] {} - {}", status.percentage, song.artist, song.title);
+
+        WidgetOutput { text: output }
+    }
 }
 
-impl Widget {
-    pub async fn new(config: Config, sender: Sender<Output>) -> Self {
+impl MPD {
+    pub async fn new(interval: Duration) -> Self {
         let mut stream = TcpStream::connect("localhost:6600").await.unwrap();
 
         let mut buf = vec![0u8; 1024];
         stream.read(&mut buf).await.unwrap();
 
         Self {
-            config,
-            sender,
-            stream,
-            tag: WidgetTag::Mpd,
+            interval,
+            stream: Mutex::new(stream),
         }
     }
 
-    pub fn tag(&self) -> WidgetTag {
-        self.tag
-    }
-
-    pub async fn stream_output(&mut self) {
-        loop {
-            let song = self.current_song().await;
-            let status = self.status().await;
-            let output = format!("[{}] {} - {}", status.percentage, song.artist, song.title);
-            self.sender
-                .send(Output {
-                    text: output,
-                    tag: self.tag,
-                })
-                .await;
-            Timer::after(self.config.interval).await;
-        }
-    }
-
-    pub async fn pause(&mut self) {
-        self.stream.write_all(b"pause\n").await.unwrap();
+    pub async fn pause(&self) {
+        self.stream
+            .lock()
+            .await
+            .write_all(b"pause\n")
+            .await
+            .unwrap();
         self.clear().await;
     }
 
-    async fn current_song(&mut self) -> Song {
-        self.stream.write_all(b"currentsong\n").await.unwrap();
+    async fn current_song(&self) -> Song {
+        self.stream
+            .lock()
+            .await
+            .write_all(b"currentsong\n")
+            .await
+            .unwrap();
 
         let mut buf = [0; 1024];
-        self.stream.read(&mut buf).await.unwrap();
+        self.stream.lock().await.read(&mut buf).await.unwrap();
 
         let s: Vec<String> = std::str::from_utf8(&buf)
             .unwrap()
@@ -102,11 +99,16 @@ impl Widget {
         }
     }
 
-    async fn status(&mut self) -> Status {
-        self.stream.write_all(b"status\n").await.unwrap();
+    async fn status(&self) -> Status {
+        self.stream
+            .lock()
+            .await
+            .write_all(b"status\n")
+            .await
+            .unwrap();
 
         let mut buf = [0u8; 1024];
-        self.stream.read(&mut buf).await.unwrap();
+        self.stream.lock().await.read(&mut buf).await.unwrap();
 
         let s: HashMap<String, String> = std::str::from_utf8(&buf)
             .unwrap()
@@ -146,8 +148,8 @@ impl Widget {
         }
     }
 
-    async fn clear(&mut self) {
+    async fn clear(&self) {
         let mut buf = [0u8; 1024];
-        self.stream.read(&mut buf).await.unwrap();
+        self.stream.lock().await.read(&mut buf).await.unwrap();
     }
 }

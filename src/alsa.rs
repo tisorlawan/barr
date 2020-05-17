@@ -1,43 +1,29 @@
 use alsa::mixer::{Mixer, SelemChannelId, SelemId};
+use async_trait::async_trait;
 
-use crate::{Output, WidgetTag};
-use async_std::sync::Sender;
-use smol::Timer;
+use crate::{Widget, WidgetOutput};
 use std::time::Duration;
 
-pub struct Config {
-    pub interval: Duration,
+pub struct Alsa {
+    interval: Duration,
 }
 
-pub struct Widget {
-    config: Config,
-    sender: Sender<Output>,
-    tag: WidgetTag,
+#[async_trait]
+impl Widget for Alsa {
+    fn interval(&self) -> Duration {
+        self.interval
+    }
+
+    async fn get_output(&self) -> WidgetOutput {
+        WidgetOutput {
+            text: self.get_volume(),
+        }
+    }
 }
 
-impl Widget {
-    pub fn new(config: Config, sender: Sender<Output>) -> Self {
-        Self {
-            config,
-            sender,
-            tag: WidgetTag::Alsa,
-        }
-    }
-
-    pub fn tag(&self) -> WidgetTag {
-        self.tag
-    }
-
-    pub async fn stream_output(&self) {
-        loop {
-            self.sender
-                .send(Output {
-                    text: self.get_volume(),
-                    tag: self.tag,
-                })
-                .await;
-            Timer::after(self.config.interval).await;
-        }
+impl Alsa {
+    pub fn new(interval: Duration) -> Self {
+        Self { interval }
     }
 
     fn get_volume(&self) -> String {

@@ -1,43 +1,35 @@
-use crate::{Output, WidgetTag};
-use async_std::sync::Sender;
+use crate::{Widget, WidgetOutput};
+use async_trait::async_trait;
 use psutil::cpu::CpuPercentCollector;
-use smol::Timer;
+use std::sync::Mutex;
 use std::time::Duration;
 
-pub struct Config {
-    pub interval: Duration,
+pub struct CPU {
+    interval: Duration,
+    collector: Mutex<CpuPercentCollector>,
 }
 
-pub struct Widget {
-    config: Config,
-    sender: Sender<Output>,
-    tag: WidgetTag,
-    collector: CpuPercentCollector,
-}
+#[async_trait]
+impl Widget for CPU {
+    fn interval(&self) -> Duration {
+        self.interval
+    }
 
-impl Widget {
-    pub fn new(config: Config, sender: Sender<Output>) -> Self {
-        Self {
-            config,
-            sender,
-            tag: WidgetTag::Cpu,
-            collector: CpuPercentCollector::new().unwrap(),
+    async fn get_output(&self) -> WidgetOutput {
+        WidgetOutput {
+            text: format!(
+                "{:.1}",
+                self.collector.lock().unwrap().cpu_percent().unwrap()
+            ),
         }
     }
+}
 
-    pub fn tag(&self) -> WidgetTag {
-        self.tag
-    }
-
-    pub async fn stream_output(&mut self) {
-        loop {
-            self.sender
-                .send(Output {
-                    text: format!("{:.1}", self.collector.cpu_percent().unwrap()),
-                    tag: self.tag,
-                })
-                .await;
-            Timer::after(self.config.interval).await;
+impl CPU {
+    pub fn new(interval: Duration) -> Self {
+        Self {
+            interval,
+            collector: Mutex::new(CpuPercentCollector::new().unwrap()),
         }
     }
 }

@@ -1,62 +1,33 @@
-use crate::{Output, WidgetTag};
-use async_std::sync::Sender;
+use crate::{Widget, WidgetOutput};
+use async_trait::async_trait;
 use chrono::prelude::*;
-use smol::Timer;
 use std::time::Duration;
 
-pub struct Config<T>
-where
-    T: AsRef<str>,
-{
-    format: T,
+#[derive(Debug, Copy, Clone)]
+pub struct Date {
     interval: Duration,
 }
 
-impl<T> Config<T>
-where
-    T: AsRef<str>,
-{
-    pub fn new(format: T, interval: Duration) -> Self {
-        Self { format, interval }
-    }
-}
-
-pub struct Widget<T>
-where
-    T: AsRef<str>,
-{
-    config: Config<T>,
-    sender: Sender<Output>,
-    tag: WidgetTag,
-}
-
-impl<T> Widget<T>
-where
-    T: AsRef<str>,
-{
-    pub fn new(config: Config<T>, sender: Sender<Output>) -> Self {
-        Self {
-            config,
-            sender,
-            tag: WidgetTag::Date,
+#[async_trait]
+impl Widget for Date {
+    async fn get_output(&self) -> WidgetOutput {
+        WidgetOutput {
+            text: Self::get_date("%a, %d %b %H:%M:%S"),
         }
     }
 
-    pub fn tag(&self) -> WidgetTag {
-        self.tag
+    fn interval(&self) -> Duration {
+        self.interval
+    }
+}
+
+impl Date {
+    pub fn new(interval: Duration) -> Self {
+        Self { interval }
     }
 
-    pub async fn stream_output(&self) {
-        loop {
-            let text = Local::now().format(self.config.format.as_ref()).to_string();
-
-            self.sender
-                .send(Output {
-                    text,
-                    tag: self.tag,
-                })
-                .await;
-            Timer::after(self.config.interval).await;
-        }
+    fn get_date(fmt: &str) -> String {
+        let now = Local::now();
+        now.format(fmt).to_string()
     }
 }

@@ -1,11 +1,11 @@
-use crate::{Output, WidgetTag};
-use async_std::sync::Sender;
-use smol::Timer;
+use crate::{Widget, WidgetOutput};
+use async_trait::async_trait;
 use std::io;
 use std::io::Read;
+use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 struct NetworkStats {
     pub rx_bytes: u64,
     pub tx_bytes: u64,
@@ -15,33 +15,63 @@ struct NetworkStats {
     pub tx_errors: u64,
 }
 
-pub struct Config {
-    pub interval: Duration,
-    pub interface: String,
+pub struct Network {
+    interval: Duration,
+    interface: String,
+
+    tmp_network_stats: Mutex<NetworkStats>,
+    tmp_last_called: Mutex<Instant>,
 }
 
-pub struct Widget {
-    config: Config,
-    sender: Sender<Output>,
-    tag: WidgetTag,
+#[async_trait]
+impl Widget for Network {
+    fn interval(&self) -> Duration {
+        self.interval
+    }
+
+    async fn get_output(&self) -> WidgetOutput {
+        let new_network_stat = Self::get_network_stats(&self.interface).unwrap();
+        let end = Instant::now();
+
+        let diff = end - *self.tmp_last_called.lock().unwrap();
+
+        let rx = (new_network_stat.rx_bytes - self.tmp_network_stats.lock().unwrap().rx_bytes)
+            as f64
+            / diff.as_secs_f64();
+        let tx = (new_network_stat.tx_bytes - self.tmp_network_stats.lock().unwrap().tx_bytes)
+            as f64
+            / diff.as_secs_f64();
+
+        let text = format!(
+            "{} {}",
+            bytesize::ByteSize::b(rx as u64),
+            bytesize::ByteSize::b(tx as u64)
+        );
+
+        let mut l = self.tmp_network_stats.lock().unwrap();
+        *l = new_network_stat;
+
+        let mut l = self.tmp_last_called.lock().unwrap();
+        *l = end;
+
+        WidgetOutput { text }
+    }
 }
 
-impl Widget {
-    pub fn new(config: Config, sender: Sender<Output>) -> Self {
+impl Network {
+    pub fn new(interval: Duration, interface: String) -> Self {
+        let iface = interface.clone();
+
         Self {
-            config,
-            sender,
-            tag: WidgetTag::NetworkSpeed,
+            interval,
+            interface,
+            tmp_network_stats: Mutex::new(Self::get_network_stats(&iface).unwrap()),
+            tmp_last_called: Mutex::new(Instant::now()),
         }
     }
 
-    pub fn tag(&self) -> WidgetTag {
-        self.tag
-    }
-
-    fn get_network_stats(&self) -> io::Result<NetworkStats> {
-        let path_root: String =
-            ("/sys/class/net/".to_string() + &self.config.interface) + "/statistics/";
+    fn get_network_stats(inteface: &str) -> io::Result<NetworkStats> {
+        let path_root: String = ("/sys/class/net/".to_string() + inteface) + "/statistics/";
         let stats_file = |file: &str| (&path_root).to_string() + file;
 
         let rx_bytes: u64 = value_from_file::<u64>(&stats_file("rx_bytes"))?;
@@ -59,41 +89,6 @@ impl Widget {
             rx_errors: rx_errors,
             tx_errors: tx_errors,
         })
-    }
-
-    pub async fn stream_output(&self) {
-        let mut network_stat = self.get_network_stats().unwrap();
-        let mut start = Instant::now();
-
-        loop {
-            Timer::after(self.config.interval).await;
-
-            let new_network_stat = self.get_network_stats().unwrap();
-            let end = Instant::now();
-
-            let diff = end - start;
-
-            let rx =
-                (new_network_stat.rx_bytes - network_stat.rx_bytes) as f64 / diff.as_secs_f64();
-            let tx =
-                (new_network_stat.tx_bytes - network_stat.tx_bytes) as f64 / diff.as_secs_f64();
-
-            let text = format!(
-                "{} {}",
-                bytesize::ByteSize::b(rx as u64),
-                bytesize::ByteSize::b(tx as u64)
-            );
-
-            self.sender
-                .send(Output {
-                    text,
-                    tag: self.tag,
-                })
-                .await;
-
-            network_stat = new_network_stat;
-            start = end;
-        }
     }
 }
 

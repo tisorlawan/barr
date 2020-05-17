@@ -1,57 +1,42 @@
+use async_trait::async_trait;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::process::Command;
 
-use crate::{Output, WidgetTag};
-use async_std::sync::Sender;
-use smol::Timer;
+use crate::{Widget, WidgetOutput};
 use std::time::Duration;
 
-pub struct Config {
-    pub interval: Duration,
+pub struct Wifi {
+    interval: Duration,
 }
 
-pub struct Widget {
-    config: Config,
-    sender: Sender<Output>,
-    tag: WidgetTag,
-}
-
-impl Widget {
-    pub fn new(config: Config, sender: Sender<Output>) -> Self {
-        Self {
-            config,
-            sender,
-            tag: WidgetTag::Wifi,
-        }
+#[async_trait]
+impl Widget for Wifi {
+    fn interval(&self) -> Duration {
+        self.interval
     }
 
-    pub fn tag(&self) -> WidgetTag {
-        self.tag
-    }
-
-    pub async fn stream_output(&self) {
-        loop {
-            let wifi = Self::get_wifi_ssid();
-            if wifi.is_none() {
-                self.sender
-                    .send(Output {
-                        text: format!("Not Connected"),
-                        tag: self.tag,
-                    })
-                    .await;
-            } else {
-                let quality = Self::get_current_wifi_quality().unwrap().abs();
-                self.sender
-                    .send(Output {
-                        text: format!("{} - {:.0}", wifi.unwrap(), quality),
-                        tag: self.tag,
-                    })
-                    .await;
+    async fn get_output(&self) -> WidgetOutput {
+        let wifi = Self::get_wifi_ssid();
+        if wifi.is_none() {
+            WidgetOutput {
+                text: format!("Not Connected"),
             }
-            Timer::after(self.config.interval).await;
+        } else {
+            let quality = Self::get_current_wifi_quality().unwrap().abs();
+            WidgetOutput {
+                text: format!("{} - {:.0}", wifi.unwrap(), quality),
+            }
         }
     }
+}
+
+impl Wifi {
+    pub fn new(interval: Duration) -> Self {
+        Self { interval }
+    }
+
+    pub async fn stream_output(&self) {}
 
     fn get_current_wifi_quality() -> Option<f64> {
         let file = File::open("/proc/net/wireless").ok()?;
@@ -83,20 +68,5 @@ impl Widget {
         } else {
             Some(output)
         }
-    }
-}
-
-#[cfg(test)]
-mod wifi_tests {
-    use super::*;
-    #[test]
-
-    fn test_wifi_quality() {
-        Widget::get_current_wifi_quality();
-    }
-
-    #[test]
-    fn test_wifi_ssid() {
-        assert_eq!(Some("dargombes".to_owned()), Widget::get_wifi_ssid());
     }
 }
