@@ -1,4 +1,4 @@
-use async_std::sync::Sender;
+use async_std::sync::{channel, Receiver, Sender};
 use async_trait::async_trait;
 use smol::{Task, Timer};
 
@@ -38,14 +38,17 @@ pub struct WidgetOutput {
 
 pub struct Barr {
     widgets: Vec<Arc<Box<dyn Widget + Send + Sync + 'static>>>,
-    sender: Sender<WidgetOutput>,
+    sender: Sender<(usize, WidgetOutput)>,
+    receiver: Receiver<(usize, WidgetOutput)>,
 }
 
 impl Barr {
-    pub fn new(sender: Sender<WidgetOutput>) -> Self {
+    pub fn new() -> Self {
+        let (sender, receiver) = channel::<(usize, WidgetOutput)>(100);
         Self {
             widgets: vec![],
             sender,
+            receiver,
         }
     }
 
@@ -53,18 +56,23 @@ impl Barr {
         self.widgets.push(Arc::new(widget));
     }
 
-    pub async fn run_detach(&self) {
-        for widget in self.widgets.iter() {
+    pub async fn run(&self) {
+        for (i, widget) in self.widgets.iter().enumerate() {
             let widget = widget.clone();
             let sender = self.sender.clone();
 
             Task::spawn(async move {
                 loop {
                     Timer::after(widget.interval()).await;
-                    sender.send(widget.get_output().await).await;
+                    sender.send((i, widget.get_output().await)).await;
                 }
             })
             .detach();
+        }
+
+        loop {
+            let (i, output) = self.receiver.recv().await.unwrap();
+            println!("{} -> {:?}", i, output);
         }
     }
 }
