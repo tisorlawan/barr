@@ -21,6 +21,9 @@ pub struct Network {
 
     tmp_network_stats: Mutex<NetworkStats>,
     tmp_last_called: Mutex<Instant>,
+
+    rx_icon: String,
+    tx_icon: String,
 }
 
 #[async_trait]
@@ -29,7 +32,7 @@ impl Widget for Network {
         self.interval
     }
 
-    async fn get_output(&self) -> WidgetOutput {
+    async fn get_output(&self, _pos: usize) -> WidgetOutput {
         let new_network_stat = Self::get_network_stats(&self.interface).unwrap();
         let end = Instant::now();
 
@@ -42,11 +45,26 @@ impl Widget for Network {
             as f64
             / diff.as_secs_f64();
 
-        let text = format!(
-            "{} {}",
-            bytesize::ByteSize::b(rx as u64),
-            bytesize::ByteSize::b(tx as u64)
-        );
+        let (rx_kb, rx_mb) = (rx / 1024.0, rx / 1024.0 / 1024.0);
+        let (tx_kb, tx_mb) = (tx / 1024.0, tx / 1024.0 / 1024.0);
+
+        let mut rx = format!("{} {:.0}", self.rx_icon, rx_kb);
+        if rx_mb > 1.0 {
+            rx = format!(
+                "<span foreground='blue'>{} <b>{:.2}</b></span>",
+                self.rx_icon, rx_mb
+            );
+        }
+
+        let mut tx = format!("{} {:.0}", self.tx_icon, tx_kb);
+        if tx_mb > 1.0 {
+            tx = format!(
+                "<span foreground='blue'>{} <b>{:.2}</b></span>",
+                self.tx_icon, tx_mb
+            );
+        }
+
+        let text = format!("{}  {}", rx, tx);
 
         let mut l = self.tmp_network_stats.lock().unwrap();
         *l = new_network_stat;
@@ -54,7 +72,11 @@ impl Widget for Network {
         let mut l = self.tmp_last_called.lock().unwrap();
         *l = end;
 
-        WidgetOutput { text }
+        WidgetOutput {
+            text,
+            use_default_fg: true,
+            use_default_bg: true,
+        }
     }
 }
 
@@ -62,11 +84,16 @@ impl Network {
     pub fn new(interval: Duration, interface: String) -> Self {
         let iface = interface.clone();
 
+        let rx_icon = "".to_string();
+        let tx_icon = "".to_string();
+
         Self {
             interval,
             interface,
             tmp_network_stats: Mutex::new(Self::get_network_stats(&iface).unwrap()),
             tmp_last_called: Mutex::new(Instant::now()),
+            rx_icon,
+            tx_icon,
         }
     }
 

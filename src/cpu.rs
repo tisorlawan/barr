@@ -7,6 +7,8 @@ use std::time::Duration;
 pub struct CPU {
     interval: Duration,
     collector: Mutex<CpuPercentCollector>,
+    tresholds: Vec<(f32, String)>,
+    icon: String,
 }
 
 #[async_trait]
@@ -15,12 +17,31 @@ impl Widget for CPU {
         self.interval
     }
 
-    async fn get_output(&self) -> WidgetOutput {
+    async fn get_output(&self, _pos: usize) -> WidgetOutput {
+        let cpu = self.collector.lock().unwrap().cpu_percent().unwrap();
+        let mut text = format!("{} {:.0}", self.icon, cpu);
+
+        let mut use_default_fg = true;
+
+        let fg = {
+            let mut fg = None;
+            for (treshold, color) in self.tresholds.iter().rev() {
+                if cpu >= *treshold {
+                    fg = Some(color);
+                    break;
+                }
+            }
+            fg
+        };
+
+        if let Some(fg) = fg {
+            text = format!("<span foreground='{}'>{}</span>", fg, text);
+            use_default_fg = false;
+        }
         WidgetOutput {
-            text: format!(
-                "{:.1}",
-                self.collector.lock().unwrap().cpu_percent().unwrap()
-            ),
+            text,
+            use_default_fg,
+            use_default_bg: true,
         }
     }
 }
@@ -30,6 +51,12 @@ impl CPU {
         Self {
             interval,
             collector: Mutex::new(CpuPercentCollector::new().unwrap()),
+            tresholds: vec![
+                (35_f32, "#E9A072".to_string()),
+                (50_f32, "#F2665F".to_string()),
+                (80_f32, "#FF0000".to_string()),
+            ],
+            icon: "".to_string(),
         }
     }
 }

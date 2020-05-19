@@ -10,9 +10,11 @@ pub struct Date {
 
 #[async_trait]
 impl Widget for Date {
-    async fn get_output(&self) -> WidgetOutput {
+    async fn get_output(&self, _pos: usize) -> WidgetOutput {
         WidgetOutput {
             text: Self::get_date("%a, %d %b %H:%M:%S"),
+            use_default_fg: true,
+            use_default_bg: true,
         }
     }
 

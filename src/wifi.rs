@@ -16,16 +16,20 @@ impl Widget for Wifi {
         self.interval
     }
 
-    async fn get_output(&self) -> WidgetOutput {
+    async fn get_output(&self, _pos: usize) -> WidgetOutput {
         let wifi = Self::get_wifi_ssid();
         if wifi.is_none() {
             WidgetOutput {
-                text: "Not Connected".to_string(),
+                text: "<span foreground='grey'>Not Connected</span>".to_string(),
+                use_default_fg: false,
+                use_default_bg: true,
             }
         } else {
             let quality = Self::get_current_wifi_quality().unwrap().abs();
             WidgetOutput {
                 text: format!("{} - {:.0}", wifi.unwrap(), quality),
+                use_default_fg: true,
+                use_default_bg: true,
             }
         }
     }

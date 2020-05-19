@@ -5,6 +5,7 @@ use std::time::Duration;
 #[derive(Debug)]
 pub struct Brightness {
     interval: Duration,
+    icon: String,
 }
 
 #[async_trait]
@@ -13,19 +14,25 @@ impl Widget for Brightness {
         self.interval
     }
 
-    async fn get_output(&self) -> WidgetOutput {
+    async fn get_output(&self, _pos: usize) -> WidgetOutput {
         WidgetOutput {
             text: format!(
-                "{:.0}",
+                "{} {:.0}",
+                self.icon,
                 (self.get_file_content().await / 7500_f64) * 100_f64
             ),
+            use_default_fg: true,
+            use_default_bg: true,
         }
     }
 }
 
 impl Brightness {
     pub fn new(interval: Duration) -> Self {
-        Self { interval }
+        Self {
+            interval,
+            icon: "".to_string(),
+        }
     }
 
     pub async fn get_file_content(&self) -> f64 {
