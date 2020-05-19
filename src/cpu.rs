@@ -36,7 +36,7 @@ impl Widget for CPU {
 
         if let Some(fg) = fg {
             text = format!("<span foreground='{}'>{}</span>", fg, text);
-            use_default_fg = false;
+            use_default_fg = true;
         }
         WidgetOutput {
             text,

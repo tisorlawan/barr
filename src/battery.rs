@@ -9,6 +9,7 @@ pub struct Battery {
     interval: Duration,
 
     ac_color: String,
+    charging_color: String,
 }
 
 #[derive(Debug)]
@@ -28,21 +29,30 @@ impl Widget for Battery {
     async fn get_output(&self, _pos: usize) -> WidgetOutput {
         let info = Self::battery_stat().unwrap();
 
+        let mut use_default_fg = true;
         let text = {
             match info.state {
                 State::Unknown | State::Full => {
+                    use_default_fg = false;
                     format!("<span foreground='{}'><b>︇</b></span>", self.ac_color)
                 }
-                State::Charging => format!("[C] {:.0}", info.value),
+                State::Charging => {
+                    use_default_fg = false;
+                    format!(
+                        "<span foreground='{}'>[C] {:.0}</span>",
+                        self.charging_color, info.value
+                    )
+                }
                 State::Discharging => format!(" {:.0}", info.value),
                 State::Empty | State::__Nonexhaustive => {
+                    use_default_fg = false;
                     format!("<span foreground='{}'><b>︇</b></span>", "red")
                 }
             }
         };
         WidgetOutput {
             text: text,
-            use_default_fg: true,
+            use_default_fg,
             use_default_bg: true,
         }
     }
@@ -55,7 +65,12 @@ impl Widget for Battery {
 impl Battery {
     pub fn new(interval: Duration) -> Self {
         let ac_color = "cyan".to_string();
-        Self { interval, ac_color }
+        let charging_color = "cyan".to_string();
+        Self {
+            interval,
+            ac_color,
+            charging_color,
+        }
     }
 
     fn battery_stat() -> Result<BatteryInfo, battery::Error> {

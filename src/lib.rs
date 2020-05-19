@@ -1,4 +1,4 @@
-use async_std::sync::{channel, Receiver, Sender};
+use async_std::sync::channel;
 use async_trait::async_trait;
 use smol::{Task, Timer};
 use std::process::Command;
@@ -43,9 +43,6 @@ type Handler = Box<dyn Widget + Send + Sync + 'static>;
 
 pub struct Barr {
     widgets: Vec<Arc<Handler>>,
-    sender: Sender<(usize, WidgetOutput)>,
-    receiver: Receiver<(usize, WidgetOutput)>,
-    outs: Vec<String>,
 }
 
 impl Default for Barr {
@@ -56,18 +53,11 @@ impl Default for Barr {
 
 impl Barr {
     pub fn new() -> Self {
-        let (sender, receiver) = channel::<(usize, WidgetOutput)>(100);
-        Self {
-            widgets: vec![],
-            sender,
-            receiver,
-            outs: vec![],
-        }
+        Self { widgets: vec![] }
     }
 
     pub fn add_widget(&mut self, widget: Handler) {
         self.widgets.push(Arc::new(widget));
-        self.outs.push(String::new());
     }
 
     pub async fn run(&mut self) {
@@ -75,14 +65,15 @@ impl Barr {
         let white = "white";
         let sep = "";
 
+        let mut outs: Vec<String> = vec!["".to_owned(); self.widgets.len()];
+
+        let (sender, receiver) = channel::<(usize, WidgetOutput)>(100);
         for (i, widget) in self.widgets.iter().enumerate() {
             let widget = widget.clone();
-            let sender = self.sender.clone();
+            let sender = sender.clone();
 
             Task::spawn(async move {
                 loop {
-                    Timer::after(widget.interval()).await;
-
                     let mut out = widget.get_output(i).await;
 
                     let (fg, bg) = if i % 2 == 0 {
@@ -99,7 +90,7 @@ impl Barr {
                     } else if out.use_default_fg {
                         out.text = format!("<span foreground='{}'> {} </span>", fg, out.text);
                     } else if out.use_default_bg {
-                        out.text = format!("<span background='{}'> {} </span>", bg, out.text);
+                        out.text = format!("<span foreground='{}'> {} </span>", bg, out.text);
                     }
                     if !(i == 0 && fg == white) {
                         out.text = format!(
@@ -107,18 +98,19 @@ impl Barr {
                             bg, fg, sep, out.text
                         );
                     }
-
                     sender.send((i, out)).await;
+
+                    Timer::after(widget.interval()).await;
                 }
             })
             .detach();
         }
 
         loop {
-            let (i, output) = self.receiver.recv().await.unwrap();
-            self.outs[i] = output.text;
+            let (i, output) = receiver.recv().await.unwrap();
+            outs[i] = output.text;
 
-            let cmd = format!("xsetroot -name \"{}\"", self.outs.join(""));
+            let cmd = format!("xsetroot -name \"{}\"", outs.join(""));
             Command::new("sh")
                 .arg("-c")
                 .arg(cmd)
