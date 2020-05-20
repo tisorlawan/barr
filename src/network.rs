@@ -15,34 +15,32 @@ struct NetworkStats {
     pub tx_errors: u64,
 }
 
-pub struct Network {
+pub struct Network<'a> {
     interval: Duration,
-    interface: String,
+    interface: &'a str,
 
-    tmp_network_stats: Mutex<NetworkStats>,
-    tmp_last_called: Mutex<Instant>,
+    network_stats: Mutex<NetworkStats>,
+    last_called: Mutex<Instant>,
 
     rx_icon: String,
     tx_icon: String,
 }
 
 #[async_trait]
-impl Widget for Network {
+impl<'a> Widget for Network<'a> {
     fn interval(&self) -> Duration {
         self.interval
     }
 
     async fn get_output(&self, _pos: usize) -> WidgetOutput {
-        let new_network_stat = Self::get_network_stats(&self.interface).unwrap();
+        let new_network_stat = Self::get_network_stats(self.interface.as_ref()).unwrap();
         let end = Instant::now();
 
-        let diff = end - *self.tmp_last_called.lock().unwrap();
+        let diff = end - *self.last_called.lock().unwrap();
 
-        let rx = (new_network_stat.rx_bytes - self.tmp_network_stats.lock().unwrap().rx_bytes)
-            as f64
+        let rx = (new_network_stat.rx_bytes - self.network_stats.lock().unwrap().rx_bytes) as f64
             / diff.as_secs_f64();
-        let tx = (new_network_stat.tx_bytes - self.tmp_network_stats.lock().unwrap().tx_bytes)
-            as f64
+        let tx = (new_network_stat.tx_bytes - self.network_stats.lock().unwrap().tx_bytes) as f64
             / diff.as_secs_f64();
 
         let (rx_kb, rx_mb) = (rx / 1024.0, rx / 1024.0 / 1024.0);
@@ -66,10 +64,10 @@ impl Widget for Network {
 
         let text = format!("{}  {}", rx, tx);
 
-        let mut l = self.tmp_network_stats.lock().unwrap();
+        let mut l = self.network_stats.lock().unwrap();
         *l = new_network_stat;
 
-        let mut l = self.tmp_last_called.lock().unwrap();
+        let mut l = self.last_called.lock().unwrap();
         *l = end;
 
         WidgetOutput {
@@ -80,18 +78,16 @@ impl Widget for Network {
     }
 }
 
-impl Network {
-    pub fn new(interval: Duration, interface: String) -> Self {
-        let iface = interface.clone();
-
+impl<'a> Network<'a> {
+    pub fn new(interval: Duration, interface: &'a str) -> Self {
         let rx_icon = "".to_string();
         let tx_icon = "".to_string();
 
         Self {
             interval,
             interface,
-            tmp_network_stats: Mutex::new(Self::get_network_stats(&iface).unwrap()),
-            tmp_last_called: Mutex::new(Instant::now()),
+            network_stats: Mutex::new(Self::get_network_stats(interface).unwrap()),
+            last_called: Mutex::new(Instant::now()),
             rx_icon,
             tx_icon,
         }

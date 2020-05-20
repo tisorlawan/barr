@@ -1,4 +1,3 @@
-use alsa::mixer::{Mixer, SelemChannelId, SelemId};
 use async_trait::async_trait;
 
 use crate::{Widget, WidgetOutput};
@@ -9,11 +8,6 @@ pub struct Alsa {
     icon: String,
 }
 
-struct AlsaInfo {
-    is_muted: bool,
-    volume: i64,
-}
-
 #[async_trait]
 impl Widget for Alsa {
     fn interval(&self) -> Duration {
@@ -21,23 +15,30 @@ impl Widget for Alsa {
     }
 
     async fn get_output(&self, _pos: usize) -> WidgetOutput {
-        let info = self.get_volume();
+        match Self::get_volume() {
+            Some((vol, is_muted)) => {
+                let (mut use_default_fg, use_default_bg) = (true, true);
+                let text = if is_muted {
+                    use_default_fg = true;
+                    format!("<span foreground='red'><i>{} {}</i></span>", self.icon, vol)
+                } else {
+                    format!("{} {}", self.icon, vol)
+                };
 
-        let (mut use_default_fg, use_default_bg) = (true, true);
-        let text = if info.is_muted {
-            use_default_fg = false;
-            format!(
-                "<span foreground='red'><i>{} {}</i></span>",
-                self.icon, info.volume
-            )
-        } else {
-            format!("{} {}", self.icon, info.volume)
-        };
-
-        WidgetOutput {
-            text,
-            use_default_fg,
-            use_default_bg,
+                WidgetOutput {
+                    text,
+                    use_default_fg,
+                    use_default_bg,
+                }
+            }
+            None => WidgetOutput {
+                text: format!(
+                    "<span foreground='red'><i>{}</i></span>",
+                    "Can't get volume"
+                ),
+                use_default_fg: true,
+                use_default_bg: true,
+            },
         }
     }
 }
@@ -50,18 +51,26 @@ impl Alsa {
         }
     }
 
-    fn get_volume(&self) -> AlsaInfo {
-        let mixer = Mixer::new("hw:0", true).unwrap();
-        let selem = mixer.find_selem(&SelemId::new("Master", 0)).unwrap();
+    fn get_volume() -> Option<(u8, bool)> {
+        let r = std::process::Command::new("sh")
+            .arg("-c")
+            .arg("amixer sget Master | grep 'Right:'")
+            .output()
+            .unwrap();
 
-        let (min, max) = selem.get_playback_volume_range();
-        let vol = selem.get_playback_volume(SelemChannelId::mono()).unwrap();
-        let _p = 100 * (vol - min) / (max - min);
+        let x = String::from_utf8(r.stdout).unwrap();
+        let vol = x
+            .split_whitespace()
+            .nth(4)
+            .unwrap()
+            .chars()
+            .skip(1)
+            .take_while(|c| *c != '%')
+            .collect::<String>()
+            .parse::<u8>()
+            .unwrap();
+        let muted = x.split_whitespace().nth(5) == Some("[off]");
 
-        let is_muted = selem.get_playback_switch(SelemChannelId::mono()).unwrap() == 0;
-        AlsaInfo {
-            is_muted,
-            volume: vol,
-        }
+        Some((vol, muted))
     }
 }
