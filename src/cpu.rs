@@ -17,7 +17,7 @@ impl Widget for CPU {
         self.interval
     }
 
-    async fn get_output(&self, _pos: usize) -> WidgetOutput {
+    async fn get_output(&self) -> WidgetOutput {
         let cpu = self.collector.lock().unwrap().cpu_percent().unwrap();
         let mut text = format!("{} {:.0}", self.icon, cpu);
 
@@ -40,8 +40,8 @@ impl Widget for CPU {
         }
         WidgetOutput {
             text,
-            use_default_fg,
-            use_default_bg: true,
+            use_default_foreground: use_default_fg,
+            use_default_background: true,
         }
     }
 }

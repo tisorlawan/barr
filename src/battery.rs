@@ -26,7 +26,7 @@ impl Display for BatteryInfo {
 
 #[async_trait]
 impl Widget for Battery {
-    async fn get_output(&self, _pos: usize) -> WidgetOutput {
+    async fn get_output(&self) -> WidgetOutput {
         match Self::battery_stat() {
             Ok(info) => {
                 let mut use_default_fg = true;
@@ -51,21 +51,17 @@ impl Widget for Battery {
                     }
                 };
                 WidgetOutput {
-                    text: text,
-                    use_default_fg,
-                    use_default_bg: true,
+                    text,
+                    use_default_foreground: use_default_fg,
+                    use_default_background: true,
                 }
             }
 
-            Err(_) => {
-                return {
-                    WidgetOutput {
-                        text: "<span foreground='grey'>No Battery</span>".to_string(),
-                        use_default_fg: true,
-                        use_default_bg: true,
-                    }
-                };
-            }
+            Err(_) => WidgetOutput {
+                text: "<span foreground='grey'>No Battery</span>".to_string(),
+                use_default_foreground: true,
+                use_default_background: true,
+            },
         }
     }
 

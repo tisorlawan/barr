@@ -14,15 +14,15 @@ impl Widget for Brightness {
         self.interval
     }
 
-    async fn get_output(&self, _pos: usize) -> WidgetOutput {
+    async fn get_output(&self) -> WidgetOutput {
         WidgetOutput {
             text: format!(
                 "{} {:.0}",
                 self.icon,
                 (self.get_file_content().await / 7500_f64) * 100_f64
             ),
-            use_default_fg: true,
-            use_default_bg: true,
+            use_default_foreground: true,
+            use_default_background: true,
         }
     }
 }

@@ -27,13 +27,14 @@ pub struct Network<'a> {
 }
 
 #[async_trait]
-impl<'a> Widget for Network<'a> {
+impl Widget for Network<'_> {
     fn interval(&self) -> Duration {
         self.interval
     }
 
-    async fn get_output(&self, _pos: usize) -> WidgetOutput {
-        let new_network_stat = Self::get_network_stats(self.interface.as_ref()).unwrap();
+    #[allow(clippy::cast_precision_loss)]
+    async fn get_output(&self) -> WidgetOutput {
+        let new_network_stat = Self::get_network_stats(self.interface).unwrap();
         let end = Instant::now();
 
         let diff = end - *self.last_called.lock().unwrap();
@@ -46,21 +47,23 @@ impl<'a> Widget for Network<'a> {
         let (rx_kb, rx_mb) = (rx / 1024.0, rx / 1024.0 / 1024.0);
         let (tx_kb, tx_mb) = (tx / 1024.0, tx / 1024.0 / 1024.0);
 
-        let mut rx = format!("{} {:.0}", self.rx_icon, rx_kb);
-        if rx_mb > 1.0 {
-            rx = format!(
+        let rx = if rx_mb > 1.0 {
+            format!(
                 "<span foreground='blue'>{} <b>{:.2}</b></span>",
                 self.rx_icon, rx_mb
-            );
-        }
+            )
+        } else {
+            format!("{} {:.0}", self.rx_icon, rx_kb)
+        };
 
-        let mut tx = format!("{} {:.0}", self.tx_icon, tx_kb);
-        if tx_mb > 1.0 {
-            tx = format!(
+        let tx = if tx_mb > 1.0 {
+            format!(
                 "<span foreground='blue'>{} <b>{:.2}</b></span>",
                 self.tx_icon, tx_mb
-            );
-        }
+            )
+        } else {
+            format!("{} {:.0}", self.tx_icon, tx_kb)
+        };
 
         let text = format!("{}  {}", rx, tx);
 
@@ -72,8 +75,8 @@ impl<'a> Widget for Network<'a> {
 
         WidgetOutput {
             text,
-            use_default_fg: true,
-            use_default_bg: true,
+            use_default_foreground: true,
+            use_default_background: true,
         }
     }
 }

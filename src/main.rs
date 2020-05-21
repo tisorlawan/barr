@@ -1,6 +1,7 @@
 use barr::{Alsa, Barr, Battery, Brightness, Date, Memory, Network, Wifi, CPU, MPD};
 use std::time::Duration;
 
+#[allow(clippy::used_underscore_binding)]
 fn main() {
     let mut barr = Barr::new();
     let one_second = Duration::from_secs(1);

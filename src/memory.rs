@@ -17,7 +17,7 @@ impl Widget for Memory {
         self.interval
     }
 
-    async fn get_output(&self, _pos: usize) -> WidgetOutput {
+    async fn get_output(&self) -> WidgetOutput {
         let ram = self.get_used_ram_percentage();
         let mut text = format!("{} {:.0}", self.icon, ram);
 
@@ -41,8 +41,8 @@ impl Widget for Memory {
 
         WidgetOutput {
             text,
-            use_default_fg,
-            use_default_bg: true,
+            use_default_foreground: use_default_fg,
+            use_default_background: true,
         }
     }
 }
@@ -61,7 +61,7 @@ impl Memory {
         }
     }
 
-    /// Get used ram in percentage
+    #[allow(clippy::cast_precision_loss)]
     pub fn get_used_ram_percentage(&self) -> f64 {
         let mut s = self.system.lock().unwrap();
         s.refresh_memory();

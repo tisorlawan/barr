@@ -14,12 +14,13 @@ impl Widget for Alsa {
         self.interval
     }
 
-    async fn get_output(&self, _pos: usize) -> WidgetOutput {
+    async fn get_output(&self) -> WidgetOutput {
+        let (mut use_default_foreground, use_default_background) = (true, true);
+
         match Self::get_volume() {
             Some((vol, is_muted)) => {
-                let (mut use_default_fg, use_default_bg) = (true, true);
                 let text = if is_muted {
-                    use_default_fg = true;
+                    use_default_foreground = true;
                     format!("<span foreground='red'><i>{} {}</i></span>", self.icon, vol)
                 } else {
                     format!("{} {}", self.icon, vol)
@@ -27,8 +28,8 @@ impl Widget for Alsa {
 
                 WidgetOutput {
                     text,
-                    use_default_fg,
-                    use_default_bg,
+                    use_default_foreground,
+                    use_default_background,
                 }
             }
             None => WidgetOutput {
@@ -36,8 +37,8 @@ impl Widget for Alsa {
                     "<span foreground='red'><i>{}</i></span>",
                     "Can't get volume"
                 ),
-                use_default_fg: true,
-                use_default_bg: true,
+                use_default_foreground,
+                use_default_background,
             },
         }
     }

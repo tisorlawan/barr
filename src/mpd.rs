@@ -4,6 +4,7 @@ use async_std::prelude::*;
 use async_std::sync::Mutex;
 use async_trait::async_trait;
 use std::collections::HashMap;
+use std::str::{self, Utf8Error};
 use std::time::Duration;
 
 #[derive(Debug, Eq, PartialEq)]
@@ -13,6 +14,7 @@ enum State {
     Stop,
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug)]
 struct Status {
     repeat: bool,
@@ -39,6 +41,7 @@ pub struct MPD {
 #[derive(Debug, Copy, Clone)]
 pub enum MPDError {
     ConnectionError,
+    ParseError,
 }
 
 impl From<std::io::Error> for MPDError {
@@ -47,9 +50,15 @@ impl From<std::io::Error> for MPDError {
     }
 }
 
+impl From<Utf8Error> for MPDError {
+    fn from(_: Utf8Error) -> Self {
+        MPDError::ParseError
+    }
+}
+
 impl From<&MPDError> for MPDError {
     fn from(e: &MPDError) -> Self {
-        e.clone()
+        *e
     }
 }
 
@@ -59,30 +68,30 @@ impl Widget for MPD {
         self.interval
     }
 
-    async fn get_output(&self, _pos: usize) -> WidgetOutput {
+    async fn get_output(&self) -> WidgetOutput {
         let mut song = self.current_song().await;
         if song.is_err() {
-            if !self.reconnect().await {
+            if self.reconnect().await {
+                song = self.current_song().await;
+            } else {
                 return WidgetOutput {
                     text: "<span foreground='red'>No MPD</span>".to_string(),
-                    use_default_fg: false,
-                    use_default_bg: true,
+                    use_default_foreground: false,
+                    use_default_background: true,
                 };
-            } else {
-                song = self.current_song().await;
             }
         }
 
         let mut status = self.status().await;
         if status.is_err() {
-            if !self.reconnect().await {
+            if self.reconnect().await {
+                status = self.status().await;
+            } else {
                 return WidgetOutput {
                     text: "<span foreground='red'>No MPD</span>".to_string(),
-                    use_default_fg: false,
-                    use_default_bg: true,
+                    use_default_foreground: false,
+                    use_default_background: true,
                 };
-            } else {
-                status = self.status().await;
             }
         }
 
@@ -91,10 +100,10 @@ impl Widget for MPD {
             let status = status.unwrap();
             let mut output = format!("[{}] {} - {}", status.percentage, song.artist, song.title);
 
-            let (mut use_default_fg, use_default_bg) = (true, true);
+            let (mut use_default_foreground, use_default_background) = (true, true);
             match status.state {
                 State::Pause => {
-                    use_default_fg = false;
+                    use_default_foreground = false;
                     output = format!(
                         "<span foreground='{}'><i>{}</i></span>",
                         self.pause_color, output
@@ -111,14 +120,14 @@ impl Widget for MPD {
 
             WidgetOutput {
                 text: output,
-                use_default_fg,
-                use_default_bg,
+                use_default_foreground,
+                use_default_background,
             }
         } else {
             WidgetOutput {
                 text: "<span foreground='red'>No MPD</span>".to_string(),
-                use_default_fg: false,
-                use_default_bg: true,
+                use_default_foreground: false,
+                use_default_background: true,
             }
         }
     }
@@ -130,7 +139,7 @@ impl MPD {
 
         let stream = match TcpStream::connect("localhost:6600").await {
             Ok(mut stream) => {
-                let mut buf = vec![0u8; 1024];
+                let mut buf = vec![0_u8; 1024];
                 stream.read(&mut buf).await.unwrap();
                 Mutex::new(Ok(stream))
             }
@@ -139,14 +148,14 @@ impl MPD {
 
         Self {
             interval,
-            stream: stream,
+            stream,
             pause_color,
         }
     }
 
     pub async fn reconnect(&self) -> bool {
         if let Ok(mut stream) = TcpStream::connect("localhost:6600").await {
-            let mut buf = vec![0u8; 1024];
+            let mut buf = vec![0_u8; 1024];
             stream.read(&mut buf).await.unwrap();
 
             let mut s = self.stream.lock().await;
@@ -165,13 +174,10 @@ impl MPD {
         let mut buf = [0; 1024];
         stream.as_ref()?.read(&mut buf).await?;
 
-        let s: Vec<String> = std::str::from_utf8(&buf)
-            .unwrap()
+        let s: Vec<&str> = str::from_utf8(&buf)?
             .trim_matches(char::from(0))
             .lines()
-            .filter(|l| *l != "OK")
             .filter(|l| l.starts_with("Artist") || l.starts_with("Title"))
-            .map(Into::into)
             .collect();
 
         if s.is_empty() {
@@ -189,44 +195,41 @@ impl MPD {
         let stream = self.stream.lock().await;
         stream.as_ref()?.write_all(b"status\n").await?;
 
-        let mut buf = [0u8; 1024];
+        let mut buf = [0_u8; 1024];
         stream.as_ref()?.read(&mut buf).await?;
 
-        let s: HashMap<String, String> = std::str::from_utf8(&buf)
+        let s: HashMap<&str, &str> = str::from_utf8(&buf)
             .unwrap()
             .trim_matches(char::from(0))
             .lines()
-            .filter(|l| *l != "OK")
-            .map(|l| l.split(": "))
-            .map(|mut l| (l.next().unwrap().to_owned(), l.next().unwrap().to_owned()))
+            .filter_map(|l| {
+                if l == "OK" {
+                    None
+                } else {
+                    let mut l = l.split(": ");
+                    Some((l.next().unwrap(), l.next().unwrap()))
+                }
+            })
             .collect();
 
-        let elapsed: f64 = s
-            .get("elapsed")
-            .unwrap_or(&"1".to_string())
-            .parse()
-            .unwrap();
+        let elapsed: f64 = s.get("elapsed").unwrap_or(&"1").parse().unwrap();
 
-        let duration: f64 = s
-            .get("duration")
-            .unwrap_or(&"1".to_string())
-            .parse()
-            .unwrap();
+        let duration: f64 = s.get("duration").unwrap_or(&"1").parse().unwrap();
 
         let state = match s.get("state").unwrap().as_ref() {
             "pause" => State::Pause,
-            "play" => State::Play,
             "stop" => State::Stop,
             _ => State::Play,
         };
 
+        #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
         Ok(Status {
-            consume: s.get("consume").unwrap() == "1",
-            single: s.get("single").unwrap() == "1",
-            random: s.get("random").unwrap() == "1",
-            repeat: s.get("repeat").unwrap() == "1",
+            consume: s.get("consume").unwrap() == &"1",
+            single: s.get("single").unwrap() == &"1",
+            random: s.get("random").unwrap() == &"1",
+            repeat: s.get("repeat").unwrap() == &"1",
             state,
-            percentage: (elapsed * 100f64 / duration).floor() as u8,
+            percentage: (elapsed * 100_f64 / duration).floor() as u8,
         })
     }
 }

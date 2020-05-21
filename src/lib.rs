@@ -1,3 +1,7 @@
+#![allow(clippy::used_underscore_binding)]
+#![allow(clippy::non_ascii_literal)]
+#![allow(clippy::must_use_candidate)]
+
 use async_std::sync::channel;
 use async_trait::async_trait;
 use smol::{Task, Timer};
@@ -28,15 +32,15 @@ pub use crate::wifi::Wifi;
 
 #[async_trait]
 pub trait Widget {
-    async fn get_output(&self, pos: usize) -> WidgetOutput;
+    async fn get_output(&self) -> WidgetOutput;
     fn interval(&self) -> Duration;
 }
 
 #[derive(Debug)]
 pub struct WidgetOutput {
     pub text: String,
-    pub use_default_bg: bool,
-    pub use_default_fg: bool,
+    pub use_default_background: bool,
+    pub use_default_foreground: bool,
 }
 
 type Handler = Box<dyn Widget + Send + Sync + 'static>;
@@ -74,7 +78,7 @@ impl Barr {
 
             Task::spawn(async move {
                 loop {
-                    let mut out = widget.get_output(i).await;
+                    let mut out = widget.get_output().await;
 
                     let (fg, bg) = if i % 2 == 0 {
                         (black, white)
@@ -82,14 +86,14 @@ impl Barr {
                         (white, black)
                     };
 
-                    if out.use_default_fg && out.use_default_bg {
+                    if out.use_default_foreground && out.use_default_background {
                         out.text = format!(
                             "<span background='{}' foreground='{}'> {} </span>",
                             bg, fg, out.text
                         );
-                    } else if out.use_default_fg {
+                    } else if out.use_default_foreground {
                         out.text = format!("<span foreground='{}'> {} </span>", fg, out.text);
-                    } else if out.use_default_bg {
+                    } else if out.use_default_background {
                         out.text = format!("<span foreground='{}'> {} </span>", bg, out.text);
                     }
                     if !(i == 0 && fg == white) {
