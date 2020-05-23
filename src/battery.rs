@@ -41,12 +41,14 @@ impl Widget for Battery {
                             format!("<span foreground='{}'><b>︇</b></span>", self.ac_color)
                         }
                         State::Charging => {
-                            use_default_fg = false;
+                            // Reset notification immidiately after charged
                             let mut last_notify = self.last_notify.lock().unwrap();
                             *last_notify = None;
+
+                            use_default_fg = false;
                             format!(
                                 "<span foreground='{}'>[C] {:.0}</span>",
-                                self.charging_color, info.value
+                                self.charging_color, info.value,
                             )
                         }
                         State::Discharging => {
@@ -56,20 +58,23 @@ impl Widget for Battery {
                                     if f64::from(info.value) <= *treshold {
                                         fg = Some(color);
 
-                                        if i == 0 {
-                                            let now = Instant::now();
+                                        if i > 0 {
+                                            break;
+                                        }
 
-                                            let mut last_notify = self.last_notify.lock().unwrap();
-                                            if *last_notify == None {
+                                        // Notify when `i == 0` (lowest treshold)
+                                        let now = Instant::now();
+                                        let mut last_notify = self.last_notify.lock().unwrap();
+
+                                        if *last_notify == None {
+                                            *last_notify = Some(now);
+                                            Self::notify_critical();
+                                        } else {
+                                            let diff: Duration = now - (*last_notify).unwrap();
+
+                                            if diff.as_secs() >= 60 {
                                                 *last_notify = Some(now);
-                                                Self::notify();
-                                            } else {
-                                                let diff: Duration = now - (*last_notify).unwrap();
-
-                                                if diff.as_secs() >= 60 {
-                                                    Self::notify();
-                                                    *last_notify = Some(now);
-                                                }
+                                                Self::notify_critical();
                                             }
                                         }
                                         break;
@@ -135,15 +140,18 @@ impl Battery {
         })
     }
 
-    fn notify() {
-        Notification::new()
+    fn notify_critical() {
+        let res = Notification::new()
             .summary("Battery Critical")
             .body("Please plug the battery")
             .timeout(Timeout::Milliseconds(45 * 1000))
             .hint(notify_rust::NotificationHint::Urgency(
                 NotificationUrgency::Critical,
             ))
-            .show()
-            .unwrap();
+            .show();
+
+        if res.is_err() {
+            eprintln!("Failed create to notification");
+        }
     }
 }

@@ -180,14 +180,23 @@ impl MPD {
             .filter(|l| l.starts_with("Artist") || l.starts_with("Title"))
             .collect();
 
+        let artist = s[0]
+            .chars()
+            .skip_while(|s| !s.is_whitespace())
+            .skip(1)
+            .collect::<String>();
+
+        let title = s[1]
+            .chars()
+            .skip_while(|s| !s.is_whitespace())
+            .skip(1)
+            .collect::<String>();
+
         if s.is_empty() {
             *stream = Err(MPDError::ConnectionError);
             Err(MPDError::ConnectionError)
         } else {
-            Ok(Song {
-                artist: s[0][8..].to_owned(),
-                title: s[1][7..].to_owned(),
-            })
+            Ok(Song { artist, title })
         }
     }
 

@@ -114,10 +114,9 @@ impl Barr {
             let (i, output) = receiver.recv().await.unwrap();
             outs[i] = output.text;
 
-            let cmd = format!("xsetroot -name \"{}\"", outs.join(""));
-            Command::new("sh")
-                .arg("-c")
-                .arg(cmd)
+            Command::new("xsetroot")
+                .arg("-name")
+                .arg(outs.join(""))
                 .output()
                 .expect("failed to execute process");
         }
