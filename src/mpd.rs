@@ -174,28 +174,27 @@ impl MPD {
         let mut buf = [0; 1024];
         stream.as_ref()?.read(&mut buf).await?;
 
+        // Get `artist`, `title`
         let s: Vec<&str> = str::from_utf8(&buf)?
             .trim_matches(char::from(0))
             .lines()
             .filter(|l| l.starts_with("Artist") || l.starts_with("Title"))
             .collect();
 
-        let artist = s[0]
-            .chars()
-            .skip_while(|s| !s.is_whitespace())
-            .skip(1)
-            .collect::<String>();
-
-        let title = s[1]
-            .chars()
-            .skip_while(|s| !s.is_whitespace())
-            .skip(1)
-            .collect::<String>();
-
         if s.is_empty() {
             *stream = Err(MPDError::ConnectionError);
             Err(MPDError::ConnectionError)
         } else {
+            let get_value = |s: &str| -> String {
+                s.chars()
+                    .skip_while(|s| !s.is_whitespace())
+                    .skip(1)
+                    .collect::<String>()
+            };
+
+            let artist = get_value(s[0]);
+            let title = get_value(s[1]);
+
             Ok(Song { artist, title })
         }
     }
@@ -222,7 +221,6 @@ impl MPD {
             .collect();
 
         let elapsed: f64 = s.get("elapsed").unwrap_or(&"1").parse().unwrap();
-
         let duration: f64 = s.get("duration").unwrap_or(&"1").parse().unwrap();
 
         let state = match s.get("state").unwrap().as_ref() {

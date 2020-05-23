@@ -19,7 +19,7 @@ impl Widget for CPU {
 
     async fn get_output(&self) -> WidgetOutput {
         let cpu = self.collector.lock().unwrap().cpu_percent().unwrap();
-        let mut text = format!("{} {:.0}", self.icon, cpu);
+        let mut text = format!("{} {:2.0}", self.icon, cpu);
 
         let mut use_default_fg = true;
 

@@ -1,6 +1,5 @@
 #![allow(clippy::used_underscore_binding)]
 #![allow(clippy::non_ascii_literal)]
-#![allow(clippy::must_use_candidate)]
 
 use async_std::sync::channel;
 use async_trait::async_trait;
