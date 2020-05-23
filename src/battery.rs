@@ -1,15 +1,19 @@
 use crate::{Widget, WidgetOutput};
 use async_trait::async_trait;
 use battery::State;
+use notify_rust::{Notification, NotificationUrgency, Timeout};
 use std::fmt::{self, Display, Formatter};
-use std::time::Duration;
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 #[derive(Debug)]
 pub struct Battery {
     interval: Duration,
+    tresholds: Vec<(f64, String)>,
 
     ac_color: String,
     charging_color: String,
+    last_notify: Mutex<Option<Instant>>,
 }
 
 #[derive(Debug)]
@@ -38,12 +42,47 @@ impl Widget for Battery {
                         }
                         State::Charging => {
                             use_default_fg = false;
+                            let mut last_notify = self.last_notify.lock().unwrap();
+                            *last_notify = None;
                             format!(
                                 "<span foreground='{}'>[C] {:.0}</span>",
                                 self.charging_color, info.value
                             )
                         }
-                        State::Discharging => format!(" {:.0}", info.value),
+                        State::Discharging => {
+                            let fg = {
+                                let mut fg = None;
+                                for (i, (treshold, color)) in self.tresholds.iter().enumerate() {
+                                    if f64::from(info.value) <= *treshold {
+                                        fg = Some(color);
+
+                                        if i == 0 {
+                                            let now = Instant::now();
+
+                                            let mut last_notify = self.last_notify.lock().unwrap();
+                                            if *last_notify == None {
+                                                *last_notify = Some(now);
+                                                Self::notify();
+                                            } else {
+                                                let diff: Duration = now - (*last_notify).unwrap();
+
+                                                if diff.as_secs() >= 60 {
+                                                    Self::notify();
+                                                    *last_notify = Some(now);
+                                                }
+                                            }
+                                        }
+                                        break;
+                                    }
+                                }
+                                fg
+                            };
+                            if let Some(fg) = fg {
+                                format!("<span foreground='{}'> {:.0}</span>", fg, info.value)
+                            } else {
+                                format!(" {:.0}", info.value)
+                            }
+                        }
                         State::Empty | State::__Nonexhaustive => {
                             use_default_fg = false;
                             format!("<span foreground='{}'><b>︇</b></span>", "red")
@@ -78,6 +117,12 @@ impl Battery {
             interval,
             ac_color,
             charging_color,
+            tresholds: vec![
+                (35_f64, "#FF0000".to_string()),
+                (56_f64, "#F2665F".to_string()),
+                (70_f64, "#E9A072".to_string()),
+            ],
+            last_notify: Mutex::new(None),
         }
     }
 
@@ -88,5 +133,17 @@ impl Battery {
             state: battery.state(),
             value: battery.state_of_charge().value * 100_f32,
         })
+    }
+
+    fn notify() {
+        Notification::new()
+            .summary("Battery Critical")
+            .body("Please plug the battery")
+            .timeout(Timeout::Milliseconds(45 * 1000))
+            .hint(notify_rust::NotificationHint::Urgency(
+                NotificationUrgency::Critical,
+            ))
+            .show()
+            .unwrap();
     }
 }
