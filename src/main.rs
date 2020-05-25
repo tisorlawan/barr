@@ -15,9 +15,9 @@ macro_rules! widgets {
     }};
 }
 
-#[allow(clippy::used_underscore_binding)]
 fn main() {
     let sec = Duration::from_secs(1);
+
     widgets!(
         Alsa::new(sec),
         MPD::new(sec).await,

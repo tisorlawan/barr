@@ -42,6 +42,7 @@ pub struct MPD {
 pub enum MPDError {
     ConnectionError,
     ParseError,
+    EmptyPlaylist,
 }
 
 impl From<std::io::Error> for MPDError {
@@ -70,15 +71,32 @@ impl Widget for MPD {
 
     async fn get_output(&self) -> WidgetOutput {
         let mut song = self.current_song().await;
+        match &song {
+            Ok(_) => (),
+            Err(MPDError::EmptyPlaylist) => {
+                return WidgetOutput {
+                    text: "<span foreground='grey'>Empty Playlist</span>".to_string(),
+                    use_default_foreground: false,
+                    use_default_background: true,
+                };
+            }
+            Err(_) => {
+                if self.reconnect().await {
+                    song = self.current_song().await;
+                } else {
+                    return WidgetOutput {
+                        text: "<span foreground='red'>No MPD</span>".to_string(),
+                        use_default_foreground: false,
+                        use_default_background: true,
+                    };
+                }
+            }
+        };
+
         if song.is_err() {
             if self.reconnect().await {
                 song = self.current_song().await;
             } else {
-                return WidgetOutput {
-                    text: "<span foreground='red'>No MPD</span>".to_string(),
-                    use_default_foreground: false,
-                    use_default_background: true,
-                };
             }
         }
 
@@ -173,6 +191,10 @@ impl MPD {
 
         let mut buf = [0; 1024];
         stream.as_ref()?.read(&mut buf).await?;
+
+        if &buf[..2] == b"OK" {
+            return Err(MPDError::EmptyPlaylist);
+        }
 
         // Get `artist`, `title`
         let s: Vec<&str> = str::from_utf8(&buf)?
