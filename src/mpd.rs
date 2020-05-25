@@ -6,7 +6,10 @@ use async_std::sync::Mutex;
 
 use async_trait::async_trait;
 
+use bitflags::bitflags;
+
 use std::collections::HashMap;
+use std::fmt::{self, Display, Formatter};
 use std::str::{self, Utf8Error};
 use std::time::Duration;
 
@@ -17,13 +20,64 @@ enum State {
     Stop,
 }
 
+bitflags! {
+    struct StatusFlags: u8 {
+        const EMPTY = 0b0000;
+
+        const REPEAT = 0b0001;
+        const RANDOM = 0b0010;
+        const SINGLE = 0b0100;
+        const CONSUM = 0b1000;
+    }
+}
+
+impl Default for StatusFlags {
+    fn default() -> Self {
+        Self::EMPTY
+    }
+}
+
+impl Display for StatusFlags {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let random = {
+            if self.contains(Self::RANDOM) {
+                "Z"
+            } else {
+                "z"
+            }
+        };
+        let consum = {
+            if self.contains(Self::CONSUM) {
+                "C"
+            } else {
+                "c"
+            }
+        };
+
+        let repeat = {
+            if self.contains(Self::REPEAT) {
+                "R"
+            } else {
+                "r"
+            }
+        };
+
+        let single = {
+            if self.contains(Self::SINGLE) {
+                "Y"
+            } else {
+                "y"
+            }
+        };
+
+        write!(f, "{}{}{}{}", random, consum, repeat, single)
+    }
+}
+
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug)]
 struct Status {
-    repeat: bool,
-    random: bool,
-    single: bool,
-    consume: bool,
+    flags: StatusFlags,
     percentage: u8,
     state: State,
 }
@@ -119,7 +173,10 @@ impl Widget for MPD {
         if song.is_ok() && status.is_ok() {
             let song = song.unwrap();
             let status = status.unwrap();
-            let mut output = format!("[{}] {} - {}", status.percentage, song.artist, song.title);
+            let mut output = format!(
+                "[{}] {} - {} [{}]",
+                status.percentage, song.artist, song.title, status.flags
+            );
 
             let (mut use_default_foreground, use_default_background) = (true, true);
             match status.state {
@@ -132,8 +189,8 @@ impl Widget for MPD {
                 }
                 State::Stop => {
                     output = format!(
-                        "<span foreground='{}'><i>/{} - {}/</i></span>",
-                        self.pause_color, song.artist, song.title
+                        "<span foreground='{}'><i>/{} - {} [{}]/</i></span>",
+                        self.pause_color, song.artist, song.title, status.flags
                     );
                 }
                 State::Play => (),
@@ -257,12 +314,23 @@ impl MPD {
             _ => State::Play,
         };
 
+        let mut flags: StatusFlags = StatusFlags::default();
+        if s.get("consume").unwrap() == &"1" {
+            flags.insert(StatusFlags::CONSUM);
+        }
+        if s.get("single").unwrap() == &"1" {
+            flags.insert(StatusFlags::SINGLE);
+        }
+        if s.get("random").unwrap() == &"1" {
+            flags.insert(StatusFlags::RANDOM);
+        }
+        if s.get("repeat").unwrap() == &"1" {
+            flags.insert(StatusFlags::REPEAT);
+        }
+
         #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
         Ok(Status {
-            consume: s.get("consume").unwrap() == &"1",
-            single: s.get("single").unwrap() == &"1",
-            random: s.get("random").unwrap() == &"1",
-            repeat: s.get("repeat").unwrap() == &"1",
+            flags,
             state,
             percentage: (elapsed * 100_f64 / duration).floor() as u8,
         })
