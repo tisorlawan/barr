@@ -1,8 +1,11 @@
 use crate::{Widget, WidgetOutput};
+
 use async_std::net::TcpStream;
 use async_std::prelude::*;
 use async_std::sync::Mutex;
+
 use async_trait::async_trait;
+
 use std::collections::HashMap;
 use std::str::{self, Utf8Error};
 use std::time::Duration;
@@ -192,7 +195,10 @@ impl MPD {
         let mut buf = [0; 1024];
         stream.as_ref()?.read(&mut buf).await?;
 
-        if &buf[..2] == b"OK" {
+        // Bytes should start with "file"
+        // Otherwise, it can be assumed that the playlist is empty
+        // Most cases if the playlist is empty, it will return "OK"
+        if !buf.starts_with(b"file") {
             return Err(MPDError::EmptyPlaylist);
         }
 
