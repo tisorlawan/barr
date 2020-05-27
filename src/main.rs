@@ -2,7 +2,7 @@ use barr::{Alsa, Barr, Battery, Brightness, Date, Memory, Network, Wifi, CPU, MP
 use std::time::Duration;
 
 macro_rules! widgets {
-    ($($widget:expr),*) => {{
+    ($($widget:expr),*$(,)?) => {{
         let mut barr = Barr::new();
 
         smol::run(async {
