@@ -31,7 +31,7 @@ impl Brightness {
     pub fn new(interval: Duration) -> Self {
         Self {
             interval,
-            icon: "".to_string(),
+            icon: "\u{f185}".to_string(),
         }
     }
 

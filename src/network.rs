@@ -83,8 +83,8 @@ impl Widget for Network<'_> {
 
 impl<'a> Network<'a> {
     pub fn new(interval: Duration, interface: &'a str) -> Self {
-        let rx_icon = "".to_string();
-        let tx_icon = "".to_string();
+        let rx_icon = "\u{f0ed}".to_string();
+        let tx_icon = "\u{f0ee}".to_string();
 
         Self {
             interval,

@@ -1,5 +1,4 @@
 #![allow(clippy::used_underscore_binding)]
-#![allow(clippy::non_ascii_literal)]
 
 use async_std::sync::channel;
 use async_trait::async_trait;
@@ -66,7 +65,7 @@ impl Barr {
     pub async fn run(&mut self) {
         let black = "#0F1419";
         let white = "white";
-        let sep = "";
+        let sep = "\u{e0b0}";
 
         let mut outs: Vec<String> = vec!["".to_owned(); self.widgets.len()];
 

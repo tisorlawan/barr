@@ -57,7 +57,7 @@ impl Memory {
                 (50_f64, "#F2665F".to_string()),
                 (80_f64, "#FF0000".to_string()),
             ],
-            icon: "".to_string(),
+            icon: "\u{f2db}".to_string(),
         }
     }
 

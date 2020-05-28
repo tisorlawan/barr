@@ -263,7 +263,7 @@ impl MPD {
         let s: Vec<&str> = str::from_utf8(&buf)?
             .trim_matches(char::from(0))
             .lines()
-            .filter(|l| l.starts_with("Artist") || l.starts_with("Title"))
+            .filter(|l| l.starts_with("Artist") || l.starts_with("Title") || l.starts_with("file"))
             .collect();
 
         if s.is_empty() {
@@ -277,8 +277,8 @@ impl MPD {
                     .collect::<String>()
             };
 
-            let artist = get_value(s[0]);
-            let title = get_value(s[1]);
+            let artist = get_value(s.get(1).unwrap_or(&"Artist: <i>No Artist</i>"));
+            let title = get_value(s.get(2).unwrap_or(&"Title: <i>No Title</i>"));
 
             Ok(Song { artist, title })
         }

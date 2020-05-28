@@ -56,7 +56,7 @@ impl CPU {
                 (50_f32, "#F2665F".to_string()),
                 (80_f32, "#FF0000".to_string()),
             ],
-            icon: "".to_string(),
+            icon: "\u{f0e4}".to_string(),
         }
     }
 }

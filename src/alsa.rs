@@ -48,7 +48,7 @@ impl Alsa {
     pub fn new(interval: Duration) -> Self {
         Self {
             interval,
-            icon: "".to_string(),
+            icon: "\u{f2a0}".to_string(),
         }
     }
 

@@ -1,3 +1,5 @@
+#![allow(clippy::non_ascii_literal)]
+
 use crate::{Widget, WidgetOutput};
 use async_trait::async_trait;
 use battery::State;
