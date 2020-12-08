@@ -15,7 +15,8 @@ pub struct Battery {
 
     ac_color: String,
     charging_color: String,
-    last_notify: Mutex<Option<Instant>>,
+    last_notify_critical: Mutex<Option<Instant>>,
+    last_notify_full: Mutex<Option<Instant>>,
 }
 
 #[derive(Debug)]
@@ -40,12 +41,30 @@ impl Widget for Battery {
                     match info.state {
                         State::Unknown | State::Full => {
                             use_default_fg = false;
+
+                            // Notify when `i == 0` (lowest treshold)
+                            let now = Instant::now();
+                            let mut last_notify_full = self.last_notify_full.lock().unwrap();
+
+                            if *last_notify_full == None {
+                                *last_notify_full = Some(now);
+                                Self::notify_full();
+                            } else {
+                                let diff: Duration = now - (*last_notify_full).unwrap();
+
+                                if diff.as_secs() >= 60 * 15 {
+                                    *last_notify_full = Some(now);
+                                    Self::notify_full();
+                                }
+                            }
+
                             format!("<span foreground='{}'><b>︇</b></span>", self.ac_color)
                         }
                         State::Charging => {
                             // Reset notification immidiately after charged
-                            let mut last_notify = self.last_notify.lock().unwrap();
-                            *last_notify = None;
+                            let mut last_notify_critical =
+                                self.last_notify_critical.lock().unwrap();
+                            *last_notify_critical = None;
 
                             use_default_fg = false;
                             format!(
@@ -54,6 +73,10 @@ impl Widget for Battery {
                             )
                         }
                         State::Discharging => {
+                            // Reset notification immidiately after charged
+                            let mut last_notify_full = self.last_notify_full.lock().unwrap();
+                            *last_notify_full = None;
+
                             let fg = {
                                 let mut fg = None;
                                 for (i, (treshold, color)) in self.tresholds.iter().enumerate() {
@@ -66,7 +89,8 @@ impl Widget for Battery {
 
                                         // Notify when `i == 0` (lowest treshold)
                                         let now = Instant::now();
-                                        let mut last_notify = self.last_notify.lock().unwrap();
+                                        let mut last_notify =
+                                            self.last_notify_critical.lock().unwrap();
 
                                         if *last_notify == None {
                                             *last_notify = Some(now);
@@ -125,11 +149,12 @@ impl Battery {
             ac_color,
             charging_color,
             tresholds: vec![
-                (35_f64, "#FF0000".to_string()),
-                (56_f64, "#F2665F".to_string()),
-                (70_f64, "#E9A072".to_string()),
+                (25_f64, "#FF0000".to_string()),
+                (35_f64, "#F2665F".to_string()),
+                (50_f64, "#E9A072".to_string()),
             ],
-            last_notify: Mutex::new(None),
+            last_notify_critical: Mutex::new(None),
+            last_notify_full: Mutex::new(None),
         }
     }
 
@@ -150,6 +175,17 @@ impl Battery {
             .hint(notify_rust::NotificationHint::Urgency(
                 NotificationUrgency::Critical,
             ))
+            .show();
+
+        if res.is_err() {
+            eprintln!("Failed create to notification");
+        }
+    }
+
+    fn notify_full() {
+        let res = Notification::new()
+            .summary("Battery Fully Charged")
+            .timeout(Timeout::Milliseconds(45 * 1000))
             .show();
 
         if res.is_err() {
