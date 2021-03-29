@@ -21,8 +21,8 @@ pub struct Battery {
 
 #[derive(Debug)]
 struct BatteryInfo {
-    pub state: battery::State,
-    pub value: f32,
+    state: battery::State,
+    value: f32,
 }
 
 impl Display for BatteryInfo {

@@ -74,7 +74,6 @@ impl Display for StatusFlags {
     }
 }
 
-#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug)]
 struct Status {
     flags: StatusFlags,

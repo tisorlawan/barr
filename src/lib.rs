@@ -1,6 +1,4 @@
-#![allow(clippy::used_underscore_binding)]
-
-use async_std::sync::channel;
+use async_std::channel;
 use async_trait::async_trait;
 use smol::{Task, Timer};
 use std::process::Command;
@@ -36,9 +34,9 @@ pub trait Widget {
 
 #[derive(Debug)]
 pub struct WidgetOutput {
-    pub text: String,
-    pub use_default_background: bool,
-    pub use_default_foreground: bool,
+    text: String,
+    use_default_background: bool,
+    use_default_foreground: bool,
 }
 
 type Handler = Box<dyn Widget + Send + Sync + 'static>;
@@ -49,7 +47,7 @@ pub struct Barr {
 
 impl Default for Barr {
     fn default() -> Self {
-        Self::new()
+        Barr::new()
     }
 }
 
@@ -69,7 +67,7 @@ impl Barr {
 
         let mut outs: Vec<String> = vec!["".to_owned(); self.widgets.len()];
 
-        let (sender, receiver) = channel::<(usize, WidgetOutput)>(100);
+        let (sender, receiver) = channel::bounded(100);
         for (i, widget) in self.widgets.iter().enumerate() {
             let widget = widget.clone();
             let sender = sender.clone();
@@ -100,7 +98,7 @@ impl Barr {
                             bg, fg, sep, out.text
                         );
                     }
-                    sender.send((i, out)).await;
+                    sender.send((i, out)).await.unwrap();
 
                     Timer::after(widget.interval()).await;
                 }
